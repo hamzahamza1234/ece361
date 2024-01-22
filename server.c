@@ -19,9 +19,10 @@ int main(int argc, char *argv[])
     char buffer[4096]; //to hold the message reciever
 
     memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC; // use IPv4 or IPv6, whichever
+    hints.ai_family = AF_INET; // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_DGRAM;  //use UDP sockets
     hints.ai_flags = AI_PASSIVE; // fill in my IP for me
+
     getaddrinfo(NULL, argv[1], &hints, &res); //specified port number in terminal
     // make a socket
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -49,7 +50,11 @@ int main(int argc, char *argv[])
 
     buffer[length] = '\0';
 
-    printf("msg recieved: %s", buffer);
+    printf("msg recieved: %s \n", buffer);
+
+    close(sockfd);
+
+    return 0;
 
 
 }
