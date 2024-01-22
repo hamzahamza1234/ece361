@@ -10,32 +10,30 @@
 
 #define _OPEN_SYS_SOCK_IPV6
 
+
 int main(int argc, char *argv[])
 {
-char dest[4096]; //will store IP adress of server
 
-if (inet_pton(AF_INET, argv[1], &dest) != 1){
-    perror("IP address didnt convert");
-    exit(EXIT_FAILURE);
-}
-
-
-int sockfd;
-socklen_t addr_size;
+int sockfd;     // to hold the socket file descriptor
+socklen_t addr_size;     //holds the size of the servers IP address 
 struct addrinfo hints, *servinfo, *p;
 int rv;
 int numbytes;
 
 
-if (argc != 3){
+if (argc != 3){  //just to check if both the IP address and port number were given as arguments
     fprintf(stderr, "usage: talker hostname message\n");
     exit(1);
 }
-memset(&hints, 0, sizeof hints);
-hints.ai_family = AF_INET; // set to AF_INET to use IPv4
-hints.ai_socktype = SOCK_DGRAM;
 
-if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0)
+
+memset(&hints, 0, sizeof hints);
+//filling up some information about the server 
+
+hints.ai_family = AF_INET; // set to AF_INET to use IPv4
+hints.ai_socktype = SOCK_DGRAM; //for a UDP connection
+
+if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0)   // here we get the infomration based on the IP address and port number given
 {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
@@ -52,13 +50,14 @@ if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0)
     break;
 }
 
+//in case we couldnt make a socket out of the IP address and port number given
 if (p == NULL)
 {
     fprintf(stderr, "Failed to create socket\n");
     return 2;
 }
 
-const char *msg = "ftp";
+const char *msg = "ftp";  // in order to send ftp to server if a file exists  
 
 char str[200];
 char name[200];
@@ -81,13 +80,12 @@ if (access(name, F_OK) == 0)
     printf("Delivered: sent %d bytes to %s\n", numbytes, argv[1]);
 }
 else
-{   //if file doesnt exist we exit
+{   // if file doesnt exist we exit
     printf("File doesnt exist\n");
     exit(1);
 }
 
 //now we wait for server to reply
-
 char buffer[4096];
 char reply[4096] = "yes";
 struct sockaddr_storage store_addr;
@@ -102,7 +100,9 @@ if (rec_bytes < 0){
 
 buffer[length] ='\0';
 
-if ( strcmp( buffer, reply) == 0){
+//if the reply was yes, we say that the file transfer can start, else we exit
+
+if ( strcmp( buffer, reply) == 0){  
     printf("A File Transfer Can Start\n");
 }
 else{
@@ -111,7 +111,7 @@ else{
 }
 
 
-
+//close the socket in the end
 
 freeaddrinfo(servinfo);
 close(sockfd);
