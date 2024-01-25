@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <time.h>
 
 #define _OPEN_SYS_SOCK_IPV6
 
@@ -68,10 +69,13 @@ scanf("%[^\n]s \n", str);
 strncpy(name, str + 4 , 100);
 printf("%s\n", name);
 
+clock_t begin; //for time
+
 //next we can check if this file exists
 if (access(name, F_OK) == 0)
 {
     printf("File exists! \n");  //if file exists we send a message called ftp to server and wait for a reply
+    begin = clock();
     if ((numbytes = sendto(sockfd, msg, strlen(msg), 0, p->ai_addr, p->ai_addrlen)) == -1)
     {
         perror("talker: sendto");
@@ -92,7 +96,10 @@ struct sockaddr_storage store_addr;
 
 int length = sizeof(struct sockaddr_storage);
 int rec_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &store_addr, &length);
+clock_t end = clock();
+double round_trip_time = (double)(end - begin) / CLOCKS_PER_SEC;
 
+printf("The round Trip time is %f seconds \n", round_trip_time);
 if (rec_bytes < 0){
         perror("failed to get message , 0 bytes recieved ");
         exit(EXIT_FAILURE);
