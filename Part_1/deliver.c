@@ -18,7 +18,7 @@ struct packet
     unsigned int frag_no;
     unsigned int size;
     char *filename;
-    char filedata[10];
+    char filedata[1000];
 };
 
 int main(int argc, char *argv[])
@@ -127,25 +127,33 @@ else{
 }
 
 
-char text_buff[10];
 
-// first lets open the file and see its size 
+
+// first lets open the file to read and the file to write  
 FILE* file_ptr;
 FILE* write_ptr;
-write_ptr = fopen("server_test.txt","w");
+
+write_ptr = fopen("rebuilt.PNG","w");
 file_ptr = fopen(name, "r");
+
+//next let us learn the size of the file
 fseek(file_ptr, 0 ,SEEK_END);
 long long int file_sz = ftell(file_ptr);
 printf("Size of the file is %lli \n", file_sz);
+
+//next let us learn how many packets to form
 double file_size = file_sz;
-int num_packets = ceil(file_size/10.0);
+int num_packets = ceil(file_size/1000.0);
 printf("The number of packets is %d\n", num_packets);
 
+//lets set the read pointer pack to the start to begin making the packets
 fseek(file_ptr, 0, SEEK_SET);
-struct packet packets[num_packets];
-int x = 10 ; // max num of bytes to read
+struct packet packets[num_packets]; // we shall use an array of packet structs
+int x = 1000 ; // max num of bytes to read
+
+// this loop will go through each packet and fill it up with the necessary information
 for (int count = 0 ; count <  num_packets ;  ++count){
-  if (count == (num_packets - 1)){
+  if (count == (num_packets - 1)){  // this condition makes sure we do not go above the end of file.
     x = file_size - (count) * x;
   }
   fread(packets[count].filedata, 1, x, file_ptr);
@@ -155,9 +163,6 @@ for (int count = 0 ; count <  num_packets ;  ++count){
   fwrite(packets[count].filedata, 1,x,write_ptr);
   packets[count].size = strlen(packets[count].filedata);
 }
-
-
-printf("%s\n", text_buff);
 
 
 
