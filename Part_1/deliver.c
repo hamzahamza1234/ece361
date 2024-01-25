@@ -8,9 +8,18 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 
 #define _OPEN_SYS_SOCK_IPV6
 
+struct packet
+{
+    unsigned int total_frag;
+    unsigned int frag_no;
+    unsigned int size;
+    char *filename;
+    char filedata[10];
+};
 
 int main(int argc, char *argv[])
 {
@@ -94,7 +103,7 @@ char buffer[4096];
 char reply[4096] = "yes";
 struct sockaddr_storage store_addr;
 
-int length = sizeof(struct sockaddr_storage);
+socklen_t length = sizeof(struct sockaddr_storage);
 int rec_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &store_addr, &length);
 clock_t end = clock();
 double round_trip_time = (double)(end - begin) / CLOCKS_PER_SEC;
@@ -116,6 +125,41 @@ else{
     printf("Server said no");
     exit(1);
 }
+
+
+char text_buff[10];
+
+// first lets open the file and see its size 
+FILE* file_ptr;
+FILE* write_ptr;
+write_ptr = fopen("server_test.txt","w");
+file_ptr = fopen(name, "r");
+fseek(file_ptr, 0 ,SEEK_END);
+long long int file_sz = ftell(file_ptr);
+printf("Size of the file is %lli \n", file_sz);
+double file_size = file_sz;
+int num_packets = ceil(file_size/10.0);
+printf("The number of packets is %d\n", num_packets);
+
+fseek(file_ptr, 0, SEEK_SET);
+struct packet packets[num_packets];
+int x = 10 ; // max num of bytes to read
+for (int count = 0 ; count <  num_packets ;  ++count){
+  if (count == (num_packets - 1)){
+    x = file_size - (count) * x;
+  }
+  fread(packets[count].filedata, 1, x, file_ptr);
+  packets[count].total_frag = num_packets;
+  packets[count].frag_no = count+1;
+  packets[count].filename = name;
+  fwrite(packets[count].filedata, 1,x,write_ptr);
+  packets[count].size = strlen(packets[count].filedata);
+}
+
+
+printf("%s\n", text_buff);
+
+
 
 
 //close the socket in the end
