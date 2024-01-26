@@ -21,6 +21,19 @@ struct packet
     char filedata[1000];
 };
 
+
+int num_digit(int num){
+    int count = 0;
+    do{
+        num = num/10;
+        count++;
+    } while (num != 0);
+
+    return count;
+
+}
+
+
 int main(int argc, char *argv[])
 {
 
@@ -162,6 +175,66 @@ for (int count = 0 ; count <  num_packets ;  ++count){
   packets[count].filename = name;
   fwrite(packets[count].filedata, 1,x,write_ptr);
   packets[count].size = strlen(packets[count].filedata);
+}
+
+//main loop where we manipulate each packet to a string and send it and wait for acknowledgement
+
+for (int num_p = 0 ; num_p < num_packets; ++num_p){
+    char packet_buffer[4096];
+    char num_buffer[4096];
+    char colon_str[2] = ":";
+
+    sprintf(num_buffer, "%d", packets[num_p].total_frag);
+    strcat(packet_buffer, num_buffer);
+    strcat(packet_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", packets[num_p].frag_no);
+    strcat(packet_buffer, num_buffer);
+    strcat(packet_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", packets[num_p].size);
+    strcat(packet_buffer, num_buffer);
+    strcat(packet_buffer, colon_str);
+
+    strcat(packet_buffer, packets[num_p].filename);
+    strcat(packet_buffer, colon_str);
+
+    int pos = strlen(packet_buffer);
+    int data_pos = 0;
+
+    for (int i = pos; i < (pos + packets[num_p].size); ++i)
+    {
+
+        packet_buffer[i] = packets[num_p].filedata[data_pos];
+        data_pos++;
+    }
+
+
+printf("The packet that we are sending is in the form: \n");
+printf("%s \n", packet_buffer);
+
+/*
+if ((numbytes = sendto(sockfd, packet_buffer, pos + packets[num_p].size , 0, p->ai_addr, p->ai_addrlen)) == -1)
+{
+    perror("talker: sendto");
+    exit(1);
+}
+
+int rec_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *)&store_addr, &length);
+
+// if the reply was yes, we send next packet , else we exit
+
+if (strcmp(buffer, reply) == 0)
+{
+    printf("packet sent\n");
+}
+else
+{
+    printf("packet not sent");
+    exit(1);
+}
+*/
+
 }
 
 
