@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 
     //close the socket in the end
 
-    close(sockfd);
+    //close(sockfd);
 
     return 0;
 }
