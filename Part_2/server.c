@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
         }
 
         if (waiting_for_ftp) {
-            printf("length: %d\n", length);
             buffer[length] = '\0';
 
             //our reply if based on what was sent from the client , if ftp was sent , we send a yes, else we send a no
@@ -140,12 +139,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
     //close the socket in the end
 
     close(sockfd);
 
     return 0;
-
-
 }
