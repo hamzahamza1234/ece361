@@ -60,16 +60,16 @@ int main(int argc, char *argv[]) {
     bool waiting_for_ftp = true;
     while(1) {
         //printf("%s", waiting_for_ftp ? "true\n" : "false\n");
+        /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
+        int length = sizeof(struct sockaddr_storage);
+        int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
+
+        if (num_bytes < 0) {
+            perror("failed to get message , 0 bytes recieved ");
+            exit(EXIT_FAILURE);
+        }
+
         if (waiting_for_ftp) {
-            /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
-            int length = sizeof(struct sockaddr_storage);
-            int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
-
-            if (num_bytes < 0) {
-                perror("failed to get message , 0 bytes recieved ");
-                exit(EXIT_FAILURE);
-            }
-
             buffer[length] = '\0';
 
             //our reply if based on what was sent from the client , if ftp was sent , we send a yes, else we send a no
@@ -98,6 +98,43 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else {
+            // Obtaining file packet
+
+            // Open file stream if first packet
+            // Packet manipulation
+            // Close file stream if last packet
+            // send acknowledgement
+
+            struct packet file_packet;
+            char name[200];
+
+            // Converting the message received from the client into the struct packet
+            sscanf(buffer, "%u:%u:%u:", &file_packet.total_frag, &file_packet.frag_no, &file_packet.size);
+            
+            int name_start_index = 0, name_end_index = 0, num_colon = 0;
+            for (int i = 0; i < num_bytes; i++) {
+                if (buffer[i] == ':') {
+                    num_colon++;
+                    if (num_colon == 3) {
+                        name_start_index = i + 1;
+                    }
+                    if (num_colon == 4) {
+                        name_end_index = i;
+                    }
+                }
+            }
+            memcpy(name, &buffer[name_start_index], name_end_index - name_start_index);
+            file_packet.filename = name;
+            memcpy(file_packet.filedata, &buffer[name_end_index + 1], file_packet.size);
+            
+            /*// Printing a packet
+            printf("total_frag: %u\n", file_packet.total_frag);
+            printf("frag_no: %u\n", file_packet.frag_no);
+            printf("size: %u\n", file_packet.size);
+            printf("filename: %s\n", file_packet.filename);
+            printf("filedata: %.*s\n", file_packet.size, file_packet.filedata);
+            fflush(stdout);*/
+
             //printf("Waiting for file packets\n");
             waiting_for_ftp = true;
         }
