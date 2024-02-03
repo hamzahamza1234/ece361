@@ -21,20 +21,10 @@ struct packet
 };
 
 int main(int argc, char *argv[]) {
-    /*// Testing string merging
-    char Yes[100] = "yes ";
-    int i = 10;
-    char Num_buff[100];
-    sprintf(Num_buff, "%d", i);
-    strcat(Yes, Num_buff);
-    printf("%s \n", Yes);
-*/
     struct addrinfo hints, *res;
     int sockfd, new_fd;
     struct sockaddr_storage from_addr;
     socklen_t addr_size;
-
-    char buffer[4096]; //to hold the message reciever
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET; // use IPv4 or IPv6, whichever
@@ -58,8 +48,10 @@ int main(int argc, char *argv[]) {
     }
 
     bool waiting_for_ftp = true;
+    FILE* new_file_ptr;
     while(1) {
-        //printf("%s", waiting_for_ftp ? "true\n" : "false\n");
+        char buffer[4096] = {'\0'}; //to hold the message reciever
+
         /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
         int length = sizeof(struct sockaddr_storage);
         int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
@@ -70,6 +62,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (waiting_for_ftp) {
+            printf("length: %d\n", length);
             buffer[length] = '\0';
 
             //our reply if based on what was sent from the client , if ftp was sent , we send a yes, else we send a no
@@ -98,13 +91,6 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else {
-            // Obtaining file packet
-
-            // Open file stream if first packet
-            // Packet manipulation
-            // Close file stream if last packet
-            // send acknowledgement
-
             struct packet file_packet;
             char name[200];
 
@@ -126,17 +112,31 @@ int main(int argc, char *argv[]) {
             memcpy(name, &buffer[name_start_index], name_end_index - name_start_index);
             file_packet.filename = name;
             memcpy(file_packet.filedata, &buffer[name_end_index + 1], file_packet.size);
-            
-            /*// Printing a packet
-            printf("total_frag: %u\n", file_packet.total_frag);
-            printf("frag_no: %u\n", file_packet.frag_no);
-            printf("size: %u\n", file_packet.size);
-            printf("filename: %s\n", file_packet.filename);
-            printf("filedata: %.*s\n", file_packet.size, file_packet.filedata);
-            fflush(stdout);*/
 
-            //printf("Waiting for file packets\n");
-            waiting_for_ftp = true;
+            // Open the file stream if this is the first packet
+            if (file_packet.frag_no == 1) {
+                new_file_ptr = fopen(file_packet.filename, "w");
+            }
+
+            // Write filedata to the filestream
+            fwrite(file_packet.filedata, 1, file_packet.size, new_file_ptr);
+
+            // Close the file stream if this is the last packet
+            if (file_packet.frag_no == file_packet.total_frag) {
+                fclose(new_file_ptr);
+                printf("File transfer complete\n");
+
+                // This file transfer is complete so wait for a new ftp message
+                waiting_for_ftp = true;
+            }
+
+            // Send packet acknowledgement
+            char reply_yes[100] = "yes";
+            int sent_bytes;
+            if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
+                perror("talker: sendto");
+                exit(1);
+            }
         }
     }
 
