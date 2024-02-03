@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -20,6 +21,14 @@ struct packet
 };
 
 int main(int argc, char *argv[]) {
+    /*// Testing string merging
+    char Yes[100] = "yes ";
+    int i = 10;
+    char Num_buff[100];
+    sprintf(Num_buff, "%d", i);
+    strcat(Yes, Num_buff);
+    printf("%s \n", Yes);
+*/
     struct addrinfo hints, *res;
     int sockfd, new_fd;
     struct sockaddr_storage from_addr;
@@ -48,41 +57,49 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    bool waiting_for_ftp = true;
     while(1) {
-        /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
-        int length = sizeof(struct sockaddr_storage);
-        int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
+        //printf("%s", waiting_for_ftp ? "true\n" : "false\n");
+        if (waiting_for_ftp) {
+            /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
+            int length = sizeof(struct sockaddr_storage);
+            int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
 
-        if (num_bytes < 0) {
-            perror("failed to get message , 0 bytes recieved ");
-            exit(EXIT_FAILURE);
-        }
-
-        buffer[length] = '\0';
-
-        //our reply if based on what was sent from the client , if ftp was sent , we send a yes, else we send a no
-
-        char reply_yes[100] = "yes";
-        char reply_no[100] = "no";
-        int sent_bytes;
-
-        printf("Message from Client: %s\n" , buffer);
-
-        char check[4096] = "ftp";
-
-        if (strcmp(check, buffer) == 0) {
-            printf("Sending yes to client\n");
-            if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
-                perror("talker: sendto");
-                exit(1);
+            if (num_bytes < 0) {
+                perror("failed to get message , 0 bytes recieved ");
+                exit(EXIT_FAILURE);
             }
-        }
-        else {
-            printf("Sending no to client\n");
-            if ((sent_bytes = sendto(sockfd, reply_no, strlen(reply_no), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
-                perror("talker: sendto");
-                exit(1);
+
+            buffer[length] = '\0';
+
+            //our reply if based on what was sent from the client , if ftp was sent , we send a yes, else we send a no
+
+            char reply_yes[100] = "yes";
+            char reply_no[100] = "no";
+            int sent_bytes;
+
+            printf("Message from Client: %s\n" , buffer);
+
+            char check[4096] = "ftp";
+
+            if (strcmp(check, buffer) == 0) {
+                printf("Sending yes to client\n");
+                if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
+                    perror("talker: sendto");
+                    exit(1);
+                }
+                waiting_for_ftp = false;
             }
+            else {
+                printf("Sending no to client\n");
+                if ((sent_bytes = sendto(sockfd, reply_no, strlen(reply_no), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
+                    perror("talker: sendto");
+                    exit(1);
+                }
+            }
+        } else {
+            //printf("Waiting for file packets\n");
+            waiting_for_ftp = true;
         }
     }
 
