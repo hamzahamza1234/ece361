@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
 while(1){
     /// UDP is connectionless so no listening or accepting. just recvfrom to listen and sento to send
-    int length = sizeof(struct sockaddr_storage);
+    socklen_t length = sizeof(struct sockaddr_storage);
     int num_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *) &from_addr, &length); //here from addr will store the address of client
 
     if (num_bytes < 0)
@@ -86,7 +86,7 @@ while(1){
 
     //close the socket in the end
 
-    close(sockfd);
+   // close(sockfd);
 
     return 0;
 
