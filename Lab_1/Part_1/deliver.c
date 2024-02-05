@@ -130,11 +130,9 @@ int main(int argc, char *argv[]) {
 
 
 
-    // first lets open the file to read and the file to write  
+    // first lets open the file to read 
     FILE* file_ptr;
-    FILE* write_ptr;
 
-    write_ptr = fopen("rebuilt.PNG","w");
     file_ptr = fopen(name, "r");
 
     //next let us learn the size of the file
@@ -145,6 +143,13 @@ int main(int argc, char *argv[]) {
     //next let us learn how many packets to form
     double file_size = file_sz;
     int num_packets = ceil(file_size/1000.0);
+    
+    // this is for the corner case of an empty file
+    if (num_packets == 0)
+    {
+        num_packets++;
+    }
+
     printf("The number of packets is %d\n", num_packets);
 
     //lets set the read pointer pack to the start to begin making the packets
@@ -161,7 +166,6 @@ int main(int argc, char *argv[]) {
         packets[count].total_frag = num_packets;
         packets[count].frag_no = count+1;
         packets[count].filename = name;
-        fwrite(packets[count].filedata, 1,x,write_ptr);
         packets[count].size = x;
     }
 
