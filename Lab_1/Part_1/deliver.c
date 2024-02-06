@@ -171,6 +171,14 @@ int main(int argc, char *argv[]) {
 
     //main loop where we manipulate each packet to a string and send it and wait for acknowledgement
 
+    
+// decide the timeout value and put it in a struct defined in sys/time.h
+    struct timeval timeout;
+    timeout.tv_sec = 1.5*round_trip_time;
+    timeout.tv_usec = 0;
+
+
+
     for (int num_p = 0 ; num_p < num_packets; ++num_p) {
         char packet_buffer[4096] = {'\0'};
         char num_buffer[4096] = {'\0'};
@@ -203,17 +211,27 @@ int main(int argc, char *argv[]) {
             perror("talker: sendto");
             exit(1);
         }
+        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&timeout, sizeof(timeout) ) < 0){
+            perror("timeout setting failed");
+            exit(1);
+        }
 
-        int rec_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *)&store_addr, &length);
+        if (recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *)&store_addr, &length) < 0){
+            printf("timeout reached.\n");
+            printf("resending packet %d\n", num_p+1);
+            num_p--;
+            continue;
+        }
+
         char reply[4096] = "ACK";
 
         // if the reply was yes, we send next packet , else we exit
         if (strcmp(buffer, reply) == 0) {
             printf("packet sent\n");
         } else {
-            printf("packet not sent");
-            exit(1);
-        }
+            printf("packet not sent, going to resend packet %d\n",num_p+1 );
+            num_p--;      
+          }
     }
 
     //close the socket in the end
