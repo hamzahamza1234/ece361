@@ -205,6 +205,7 @@ int main(int argc, char *argv[]) {
         }
 
         int rec_bytes = recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *)&store_addr, &length);
+        char reply[4096] = "ACK";
 
         // if the reply was yes, we send next packet , else we exit
         if (strcmp(buffer, reply) == 0) {
