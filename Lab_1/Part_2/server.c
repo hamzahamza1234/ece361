@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Send packet acknowledgement
-            char reply_yes[100] = "yes";
+            char reply_yes[100] = "ACK";
             int sent_bytes;
             if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
                 perror("talker: sendto");
