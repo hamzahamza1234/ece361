@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <time.h>
+#include <assert.h>
 
 #define BACKLOG 10
 
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
     }
 
     bool waiting_for_ftp = true;
+    int next_packet = 1;
     FILE* new_file_ptr;
     while(1) {
         char buffer[4096] = {'\0'}; //to hold the message reciever
@@ -81,6 +83,7 @@ int main(int argc, char *argv[]) {
                     exit(1);
                 }
                 waiting_for_ftp = false;
+                next_packet = 1;
             }
             else {
                 printf("Sending no to client\n");
@@ -90,51 +93,64 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else {
-            struct packet file_packet;
-            char name[200];
+            // Randomly determine if a packet is dropped
+            // A higher drop_frequency mean that the chance of dropping is lower (packets drop 1 in drop_frequncy times)
+            int drop_frequency = 10;
+            if (rand() % drop_frequency > 0 ) {
+                // Packet is accepted
+                struct packet file_packet;
+                char name[200];
 
-            // Converting the message received from the client into the struct packet
-            sscanf(buffer, "%u:%u:%u:", &file_packet.total_frag, &file_packet.frag_no, &file_packet.size);
-            
-            int name_start_index = 0, name_end_index = 0, num_colon = 0;
-            for (int i = 0; i < num_bytes; i++) {
-                if (buffer[i] == ':') {
-                    num_colon++;
-                    if (num_colon == 3) {
-                        name_start_index = i + 1;
-                    }
-                    if (num_colon == 4) {
-                        name_end_index = i;
+                // Converting the message received from the client into the struct packet
+                sscanf(buffer, "%u:%u:%u:", &file_packet.total_frag, &file_packet.frag_no, &file_packet.size);
+                
+                int name_start_index = 0, name_end_index = 0, num_colon = 0;
+                for (int i = 0; i < num_bytes; i++) {
+                    if (buffer[i] == ':') {
+                        num_colon++;
+                        if (num_colon == 3) {
+                            name_start_index = i + 1;
+                        }
+                        if (num_colon == 4) {
+                            name_end_index = i;
+                        }
                     }
                 }
-            }
-            memcpy(name, &buffer[name_start_index], name_end_index - name_start_index);
-            file_packet.filename = name;
-            memcpy(file_packet.filedata, &buffer[name_end_index + 1], file_packet.size);
+                memcpy(name, &buffer[name_start_index], name_end_index - name_start_index);
+                file_packet.filename = name;
+                memcpy(file_packet.filedata, &buffer[name_end_index + 1], file_packet.size);
 
-            // Open the file stream if this is the first packet
-            if (file_packet.frag_no == 1) {
-                new_file_ptr = fopen(file_packet.filename, "w");
-            }
+                // Need to check to make sure that packets are being processed in expected order
+                assert (file_packet.frag_no == next_packet);
+                next_packet++;
 
-            // Write filedata to the filestream
-            fwrite(file_packet.filedata, 1, file_packet.size, new_file_ptr);
+                // Open the file stream if this is the first packet
+                if (file_packet.frag_no == 1) {
+                    new_file_ptr = fopen(file_packet.filename, "w");
+                }
 
-            // Close the file stream if this is the last packet
-            if (file_packet.frag_no == file_packet.total_frag) {
-                fclose(new_file_ptr);
-                printf("File transfer complete\n");
+                // Write filedata to the filestream
+                fwrite(file_packet.filedata, 1, file_packet.size, new_file_ptr);
 
-                // This file transfer is complete so wait for a new ftp message
-                waiting_for_ftp = true;
-            }
+                // Close the file stream if this is the last packet
+                if (file_packet.frag_no == file_packet.total_frag) {
+                    fclose(new_file_ptr);
+                    printf("File transfer complete\n");
 
-            // Send packet acknowledgement
-            char reply_yes[100] = "ACK";
-            int sent_bytes;
-            if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
-                perror("talker: sendto");
-                exit(1);
+                    // This file transfer is complete so wait for a new ftp message
+                    waiting_for_ftp = true;
+                }
+
+                // Send packet acknowledgement
+                char reply_yes[100] = "ACK";
+                int sent_bytes;
+                if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
+                    perror("talker: sendto");
+                    exit(1);
+                }
+            } else {
+                // Packet is dropped
+                printf("Packet dropped\n");
             }
         }
     }
