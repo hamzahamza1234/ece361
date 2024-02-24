@@ -26,6 +26,10 @@ int main(int argc, char *argv[]) {
     int sockfd, new_fd;
     struct sockaddr_storage from_addr;
     socklen_t addr_size;
+    time_t t;
+
+    // Intialize random number generator
+    srand((unsigned) time(&t));
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET; // use IPv4 or IPv6, whichever
@@ -95,8 +99,8 @@ int main(int argc, char *argv[]) {
         } else {
             // Randomly determine if a packet is dropped
             // A higher drop_frequency mean that the chance of dropping is lower (packets drop 1 in drop_frequncy times)
-            int drop_frequency = 10;
-            if (rand() % drop_frequency > 0 ) {
+            int drop_frequency = 100;
+            //if (rand() % drop_frequency > 0 ) {
                 // Packet is accepted
                 struct packet file_packet;
                 char name[200];
@@ -119,39 +123,59 @@ int main(int argc, char *argv[]) {
                 memcpy(name, &buffer[name_start_index], name_end_index - name_start_index);
                 file_packet.filename = name;
                 memcpy(file_packet.filedata, &buffer[name_end_index + 1], file_packet.size);
+                //int num = rand();
+                //printf("rand() = %d\n", num);
+
+                if (rand() % drop_frequency == 0 ) {
+                    printf("Packet %d dropped\n", file_packet.frag_no);
+                    // Send NACK
+                    char reply_no[100] = "NACK";
+                    int sent_bytes;
+                    if ((sent_bytes = sendto(sockfd, reply_no, strlen(reply_no), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
+                        perror("talker: sendto");
+                        exit(1);
+                    }
+                } else {
 
                 // Need to check to make sure that packets are being processed in expected order
+                //if (file_packet.frag_no != next_packet) {
+                //    printf("file_packet.frag_no = %d, next_packet = %d\n", file_packet.frag_no, next_packet);
+                //}
                 assert (file_packet.frag_no == next_packet);
-                next_packet++;
+                ///if (file_packet.frag_no == next_packet) {
+                    next_packet++;
 
-                // Open the file stream if this is the first packet
-                if (file_packet.frag_no == 1) {
-                    new_file_ptr = fopen(file_packet.filename, "w");
-                }
+                    // Open the file stream if this is the first packet
+                    if (file_packet.frag_no == 1) {
+                        new_file_ptr = fopen(file_packet.filename, "w");
+                    }
 
-                // Write filedata to the filestream
-                fwrite(file_packet.filedata, 1, file_packet.size, new_file_ptr);
+                    // Write filedata to the filestream
+                    fwrite(file_packet.filedata, 1, file_packet.size, new_file_ptr);
 
-                // Close the file stream if this is the last packet
-                if (file_packet.frag_no == file_packet.total_frag) {
-                    fclose(new_file_ptr);
-                    printf("File transfer complete\n");
+                    // Close the file stream if this is the last packet
+                    if (file_packet.frag_no == file_packet.total_frag) {
+                        fclose(new_file_ptr);
+                        printf("File transfer complete\n");
 
-                    // This file transfer is complete so wait for a new ftp message
-                    waiting_for_ftp = true;
-                }
+                        // This file transfer is complete so wait for a new ftp message
+                        waiting_for_ftp = true;
+                    }
+                //}
 
                 // Send packet acknowledgement
                 char reply_yes[100] = "ACK";
                 int sent_bytes;
+                //printf("Packet %d Acknowledgement\n", file_packet.frag_no);
                 if ((sent_bytes = sendto(sockfd, reply_yes, strlen(reply_yes), 0, (const struct sockaddr *)&from_addr, length)) == -1) {
                     perror("talker: sendto");
                     exit(1);
                 }
-            } else {
+                }
+            /*} else {
                 // Packet is dropped
                 printf("Packet dropped\n");
-            }
+            }*/
         }
     }
 

@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <time.h>
+//#include <sys/time.h>
 #include <math.h>
 
 #define _OPEN_SYS_SOCK_IPV6
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    memset(&hints, 0, sizeof hints);
+    memset(&hints, 0, sizeof(hints));
     //filling up some information about the server 
 
     hints.ai_family = AF_INET; // set to AF_INET to use IPv4
@@ -180,6 +181,7 @@ int main(int argc, char *argv[]) {
 
 
     for (int num_p = 0 ; num_p < num_packets; ++num_p) {
+        char msg_buffer[4096] = {'\0'};
         char packet_buffer[4096] = {'\0'};
         char num_buffer[4096] = {'\0'};
         char colon_str[2] = ":";
@@ -216,7 +218,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        if (recvfrom(sockfd, (char *)buffer, 4096, 0, (struct sockaddr *)&store_addr, &length) < 0){
+        if (recvfrom(sockfd, (char *)msg_buffer, 4096, 0, (struct sockaddr *)&store_addr, &length) < 0){
             printf("timeout reached.\n");
             printf("resending packet %d\n", num_p+1);
             num_p--;
@@ -226,12 +228,12 @@ int main(int argc, char *argv[]) {
         char reply[4096] = "ACK";
 
         // if the reply was yes, we send next packet , else we exit
-        if (strcmp(buffer, reply) == 0) {
+        if (strcmp(msg_buffer, reply) == 0) {
             printf("packet sent\n");
         } else {
             printf("packet not sent, going to resend packet %d\n",num_p+1 );
             num_p--;      
-          }
+        }
     }
 
     //close the socket in the end
