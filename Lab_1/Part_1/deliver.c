@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <time.h>
-//#include <sys/time.h>
+#include <sys/time.h>
 #include <math.h>
 
 #define _OPEN_SYS_SOCK_IPV6
@@ -175,8 +175,13 @@ int main(int argc, char *argv[]) {
     
 // decide the timeout value and put it in a struct defined in sys/time.h
     struct timeval timeout;
-    timeout.tv_sec = 1.5*round_trip_time;
-    timeout.tv_usec = 0;
+    if (1.5*round_trip_time > 1) {
+        timeout.tv_sec = 1.5*round_trip_time;
+        timeout.tv_usec = 0;
+    } else {
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1.5*round_trip_time*1000000;
+    }
 
 
 
@@ -213,6 +218,7 @@ int main(int argc, char *argv[]) {
             perror("talker: sendto");
             exit(1);
         }
+
         if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&timeout, sizeof(timeout) ) < 0){
             perror("timeout setting failed");
             exit(1);
