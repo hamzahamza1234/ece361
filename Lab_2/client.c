@@ -14,6 +14,16 @@
 
 #define _OPEN_SYS_SOCK_IPV6
 #define MAXDATASIZE 100
+#define MAX_NAME 100
+#define atoa(x) #x
+
+struct message
+{
+    unsigned int type;
+    unsigned int size;
+    char source[MAX_NAME];
+    char data[MAXDATASIZE];
+};
 
 int main(int argc, char *argv[])
 {
@@ -36,6 +46,8 @@ int main(int argc, char *argv[])
         char command[4096];
         char login_com[4096];
 
+        struct message msg;
+
         printf("New Client has started, Please enter a command\n");
         fgets(command, MAXDATASIZE, stdin);
 
@@ -52,9 +64,12 @@ int main(int argc, char *argv[])
         
 
         if (strcmp(command,"/quit\n") == 0){
+            printf("Terminating Program\n");
             break;
         }
         else {
+            msg.type = 1;  //LOGIN TYPE
+
             char delim[]=" ";
             int num_args = 0;
             strncpy(login_com, command+7,MAXDATASIZE );
@@ -99,27 +114,29 @@ int main(int argc, char *argv[])
 
        server_port = atoi(server_p);
 
-
        printf("client name: %s\n", client_name);
        printf("client pass: %s\n", client_pass);
-       printf("client ip: %s\n", server_address);
-       printf("server port: %d\n", server_port);
+       printf("Server ip: %s\n", server_address);
+       printf("server port: %s\n", server_p);
 
-       return 0;
+
+       msg.size = strlen(client_pass);
+       strncat(msg.source, client_name, 100);
+       strncat(msg.data, client_pass,100);   
 
         
-      
-
     memset(&hints, 0, sizeof(hints));
     // filling up some information about the server
 
     hints.ai_family = AF_INET;      // set to AF_INET to use IPv4
     hints.ai_socktype = SOCK_STREAM; // for a UDP connection
 
-    if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0)
+    server_p[strcspn(server_p, "\n")] = 0;
+
+    if ((rv = getaddrinfo(server_address,server_p, &hints, &servinfo)) != 0)
     { // here we get the infomration based on the IP address and port number given
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
+        continue;
     }
     // loop through all the results and make a socket
     for (p = servinfo; p != NULL; p = p->ai_next)
@@ -133,7 +150,7 @@ int main(int argc, char *argv[])
         if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1)
         {
             close(sockfd);
-            perror("client: connect");
+            perror("client: connect failure");
             continue;
         }
             break;
@@ -143,7 +160,7 @@ int main(int argc, char *argv[])
     if (p == NULL)
     {
         fprintf(stderr, "Failed to create socket and connect\n");
-        return 2;
+        continue;
     }
 
      if ( *inet_ntop(p->ai_family , (struct sockaddr *)p->ai_addr, s, sizeof (s)) == -1 ){
@@ -151,6 +168,34 @@ int main(int argc, char *argv[])
         }
 
     printf("client: connecting to %s\n", s);
+
+    char login_buffer[4096] = {'\0'};
+    char num_buffer[4096] = {'\0'};
+    char colon_str[2] = ":";
+
+    sprintf(num_buffer, "%d", msg.type);
+    strcat(login_buffer, num_buffer);
+    strcat(login_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", msg.size);
+    strcat(login_buffer, num_buffer);
+    strcat(login_buffer, colon_str);
+
+    strcat(login_buffer, msg.source);
+    strcat(login_buffer, colon_str);
+
+    strcat(login_buffer, msg.data);
+
+    int len_login_msg = strlen(login_buffer);
+
+    printf("Sending to Server: %s\n",login_buffer);
+
+    if (send(sockfd, login_buffer, len_login_msg, 0) == -1)
+    {
+        perror("send");
+        close(sockfd);
+        exit(0);
+    }
 
     while(1){
 
