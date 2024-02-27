@@ -198,15 +198,16 @@ int main(int argc, char *argv[])
     }
 
     while(1){
+        // inside here I am logged in to the server 
 
     char str[MAXDATASIZE];
 
     // this is to get the filename from the terminal
-    printf("Enter the message (or enter exit): \n");
+    printf("Enter the message (or enter /logout ): \n");
     fgets(str,MAXDATASIZE, stdin );
     int len = strlen(str);
 
-    char exit_msg[100]= "exit\n";
+    char exit_msg[100]= "/logout\n";
 
     if (strcmp(str,exit_msg) == 0){
         break;
