@@ -12,8 +12,7 @@
 #include <math.h>
 
 #define _OPEN_SYS_SOCK_IPV6
-
-
+#define MAXDATASIZE 100
 
 int main(int argc, char *argv[])
 {
@@ -72,12 +71,20 @@ int main(int argc, char *argv[])
 
     printf("client: connecting to %s\n", s);
 
-    char str[200];
+    while(1){
+
+    char str[MAXDATASIZE];
 
     // this is to get the filename from the terminal
-    printf("Enter the message: \n");
-    scanf("%[^\n]s \n", str);
+    printf("Enter the message (or enter exit): \n");
+    fgets(str,MAXDATASIZE, stdin );
     int len = strlen(str);
+
+    char exit_msg[100]= "exit\n";
+
+    if (strcmp(str,exit_msg) == 0){
+        break;
+    }
 
     if (send(sockfd , str , len, 0) == -1){
         perror("send");
@@ -85,6 +92,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+    }
+
+    printf("closing connection \n");
 
     freeaddrinfo(servinfo);
     close(sockfd);

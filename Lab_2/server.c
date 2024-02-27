@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <time.h>
+#include <unistd.h>
 
 #define BACKLOG 20
 #define MAXDATASIZE 100
@@ -15,7 +16,7 @@
 int main(int argc, char *argv[])
 {
     struct addrinfo hints, *res;
-    int sockfd, new_fd ,num_bytes;
+    int sockfd, new_fd ;
     struct sockaddr_storage from_addr;
     socklen_t addr_size;
     char s[INET_ADDRSTRLEN];
@@ -50,6 +51,8 @@ int main(int argc, char *argv[])
 
     while(1){
 
+        printf("looking for a new connextion\n");
+
         if (listen(sockfd, BACKLOG) == -1){
             perror("listen failed");
             exit(1);
@@ -66,14 +69,35 @@ int main(int argc, char *argv[])
             perror("inet_ntop failed");
         }
         printf("server: got connection from %s\n", s);
+ 
+        int num_bytes = 0;
 
-        if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == -1)
+        if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0)
         {
-            perror("recv failed");
-            exit(1);
+            close(new_fd);
+            printf("closing connection\n");
+            perror("recv fininshed");
+            continue;
         }
         buf[num_bytes] = '\0';
-        printf("SERVER : received '%s'\n", buf);
+        printf("SERVER : received : %s \n", buf);
+
+
+        while(num_bytes != 0){
+            num_bytes = 0;
+            if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
+            {
+                close(new_fd);
+                printf("closing connection\n");
+                perror("recv finished");
+                break;
+            }
+            buf[num_bytes] = '\0';
+            printf("SERVER : received : %s \n", buf);
+        }
+
+
+        
     }
 
 
