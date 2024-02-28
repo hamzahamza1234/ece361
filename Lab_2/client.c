@@ -15,7 +15,6 @@
 #define _OPEN_SYS_SOCK_IPV6
 #define MAXDATASIZE 100
 #define MAX_NAME 100
-#define atoa(x) #x
 
 struct message
 {
@@ -41,21 +40,22 @@ int main(int argc, char *argv[])
     char server_p[100];
     int server_port;
 
-
+   // Main While loop that the client will stay in regardless of weather its connected or not
+   // Only way to exit this is my typing /quit
     while(1){
         char command[4096];
         char login_com[4096];
-
-        struct message msg;
+        
+        struct message msg;   //this struct will store the first login_msg sent to server
 
         printf("New Client has started, Please enter a command\n");
-        fgets(command, MAXDATASIZE, stdin);
+        fgets(command, MAXDATASIZE, stdin);  //using fgets because scanf terminates after whitespaces
 
         //check for /quit or /login first because only those commands can be done first
         char login_check[4096];
         strncpy(login_check, command, 6);
 
-        while (strcmp(login_check, "/login") != 0 && strcmp(command, "/quit\n") != 0)
+        while (strcmp(login_check, "/login") != 0 && strcmp(command, "/quit\n") != 0) //if client enters anything else we will stay here
         {
             printf("Please Try Again, Enter the login or quit command with correct Arguments\n");
             fgets(command, MAXDATASIZE, stdin);
@@ -63,20 +63,20 @@ int main(int argc, char *argv[])
         }
         
 
-        if (strcmp(command,"/quit\n") == 0){
+        if (strcmp(command,"/quit\n") == 0){ // the only way to exit the program
             printf("Terminating Program\n");
             break;
         }
         else {
-            msg.type = 1;  //LOGIN TYPE
+            msg.type = 1;  //LOGIN TYPE (indexing from 1 in the table given in the document)
 
-            char delim[]=" ";
+            char delim[]=" ";  // used to seperate the login command to all the different arguments 
             int num_args = 0;
             strncpy(login_com, command+7,MAXDATASIZE );
 
             char* login_ptr = strtok(login_com,delim);
 
-            while(login_ptr != NULL){
+            while(login_ptr != NULL){   // this saves each argument in its respective place
                 if (num_args == 0){
                    strncpy(client_name, login_ptr,100);
                 }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
                 login_ptr = strtok(NULL, delim);
             }
 
-            if (num_args != 4){
+            if (num_args != 4){  //error checking for too many arguments
                 printf("Wrong number of Arguments\n");
                 continue;
             }
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         int num;
         char ch;
 
-        if ((sscanf(server_p, "%i%c", &num, &ch) == 0))
+        if ((sscanf(server_p, "%i%c", &num, &ch) == 0))  // error checking to make sure port is a number
         {
             printf("port number has to be a NUMBER\n");
             continue;
@@ -124,14 +124,18 @@ int main(int argc, char *argv[])
        strncat(msg.source, client_name, 100);
        strncat(msg.data, client_pass,100);   
 
-        
+    // At this point the first login message is ready to send 
+
+    // Now we try to connect to the server with the given IP and port
+    // if we fail we return back to the top and ask for new IP address and port
+
     memset(&hints, 0, sizeof(hints));
     // filling up some information about the server
 
     hints.ai_family = AF_INET;      // set to AF_INET to use IPv4
-    hints.ai_socktype = SOCK_STREAM; // for a UDP connection
+    hints.ai_socktype = SOCK_STREAM; // for a TCP connection
 
-    server_p[strcspn(server_p, "\n")] = 0;
+    server_p[strcspn(server_p, "\n")] = 0; // to remove the new line character at the end of the server_p buffer
 
     if ((rv = getaddrinfo(server_address,server_p, &hints, &servinfo)) != 0)
     { // here we get the infomration based on the IP address and port number given
@@ -162,12 +166,15 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to create socket and connect\n");
         continue;
     }
-
+    // just to print the connection message
      if ( *inet_ntop(p->ai_family , (struct sockaddr *)p->ai_addr, s, sizeof (s)) == -1 ){
             perror("inet_ntop failed");
         }
 
     printf("client: connecting to %s\n", s);
+
+
+    //convert the struct to a buffer ready to send 
 
     char login_buffer[4096] = {'\0'};
     char num_buffer[4096] = {'\0'};
@@ -197,6 +204,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+    // At this point we need to wait for a reply and check if it is an ACK or a NACK
+    // Still need to implement
+    
     while(1){
         // inside here I am logged in to the server 
 

@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;      // use IPv4 or IPv6, whichever
-    hints.ai_socktype = SOCK_STREAM; // use UDP sockets
+    hints.ai_socktype = SOCK_STREAM; // use TCP sockets
     hints.ai_flags = AI_PASSIVE;    // fill in my IP for me
 
     getaddrinfo(NULL, argv[1], &hints, &res); // specified port number in terminal
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
  
         int num_bytes = 0;
 
-        if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0)
+        if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0) // this makes sure that if client closes its fd, we stop listening and close ours as well
         {
             close(new_fd);
             printf("closing connection\n");
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
         printf("SERVER : received : %s \n", buf);
 
 
-        while(num_bytes != 0){
+        while(num_bytes != 0){  // this loop makes sure we keep listening to our client until it closes
             num_bytes = 0;
             if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
