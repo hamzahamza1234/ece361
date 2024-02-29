@@ -11,10 +11,13 @@
 #include <sys/time.h>
 #include <math.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #define _OPEN_SYS_SOCK_IPV6
 #define MAXDATASIZE 100
 #define MAX_NAME 100
+
+bool quit = false;
 
 struct message
 {
@@ -43,6 +46,11 @@ int main(int argc, char *argv[])
    // Main While loop that the client will stay in regardless of weather its connected or not
    // Only way to exit this is my typing /quit
     while(1){
+
+        if (quit == true){
+            break;
+        }
+
         char command[4096];
         char login_com[4096];
         
@@ -205,21 +213,47 @@ int main(int argc, char *argv[])
     }
 
     // At this point we need to wait for a reply and check if it is an ACK or a NACK
-    // Still need to implement
-    
+
+    int num_bytes = 0;
+    char buf[MAXDATASIZE];
+
+    if ((num_bytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == 0) 
+    {
+        close(sockfd);
+        printf("closing connection\n");
+        perror("recv fininshed");
+        continue;
+    }
+    buf[num_bytes] = '\0';
+    printf("Client : received : %s \n", buf);
+
+    if (buf[0]== '2'){ //means ack was recieved
+        printf("Client Authenticated and joined a connection\n");
+    }
+    else {
+        printf("Client could not be authenicated, please try again\n");
+        continue;
+    }
+
     while(1){
         // inside here I am logged in to the server 
 
     char str[MAXDATASIZE];
 
     // this is to get the filename from the terminal
-    printf("Enter the message (or enter /logout ): \n");
+    printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
     fgets(str,MAXDATASIZE, stdin );
     int len = strlen(str);
 
     char exit_msg[100]= "/logout\n";
 
     if (strcmp(str,exit_msg) == 0){
+        break;
+    }
+
+    if (strcmp(str, "/quit\n") == 0)  { // the only way to exit the program
+        printf("Terminating Program\n");
+        quit = true;
         break;
     }
 

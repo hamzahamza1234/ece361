@@ -11,7 +11,19 @@
 
 #define BACKLOG 20
 #define MAXDATASIZE 100
+#define MAX_NAME 100
 
+struct message
+{
+    unsigned int type;
+    unsigned int size;
+    char source[MAX_NAME];
+    char data[MAXDATASIZE];
+};
+
+// Defining the LO_ACK message 
+struct message lo_ack;
+struct message lo_nack;
 
 int main(int argc, char *argv[])
 {
@@ -21,10 +33,62 @@ int main(int argc, char *argv[])
     socklen_t addr_size;
     char s[INET_ADDRSTRLEN];
     char buf[MAXDATASIZE];
+    char zero[100]= {'0' };
 
     addr_size = sizeof(from_addr);
 
     char buffer[4096]; // to hold the message reciever
+
+    //defining the lo ack message so early because it doesnt change
+
+    lo_ack.type = 2; //index based on the table in the document
+    lo_ack.size = 0;
+    strncat(lo_ack.source, zero, 2);
+    strncat(lo_ack.data,zero , 2);
+
+    char lo_ack_buffer[4096] = {'\0'};
+    char num_buffer[4096] = {'\0'};
+    char colon_str[2] = ":";
+
+    sprintf(num_buffer, "%d", lo_ack.type);
+    strcat(lo_ack_buffer, num_buffer);
+    strcat(lo_ack_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", lo_ack.size);
+    strcat(lo_ack_buffer, num_buffer);
+    strcat(lo_ack_buffer, colon_str);
+
+    strcat(lo_ack_buffer, lo_ack.source);
+    strcat(lo_ack_buffer, colon_str);
+
+    strcat(lo_ack_buffer, lo_ack.data);
+
+    int len_lo_ack_msg = strlen(lo_ack_buffer);
+
+    //defining the lo nack message as well
+
+    lo_nack.type = 3; // index based on the table in the document
+    lo_nack.size = 0;
+    strncat(lo_nack.source, zero, 2);
+    strncat(lo_nack.data, zero, 2);
+
+    char lo_nack_buffer[4096] = {'\0'};
+
+    sprintf(num_buffer, "%d", lo_nack.type);
+    strcat(lo_nack_buffer, num_buffer);
+    strcat(lo_nack_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", lo_nack.size);
+    strcat(lo_nack_buffer, num_buffer);
+    strcat(lo_nack_buffer, colon_str);
+
+    strcat(lo_nack_buffer, lo_nack.source);
+    strcat(lo_nack_buffer, colon_str);
+
+    strcat(lo_nack_buffer, lo_nack.data);
+
+    int len_lo_nack_msg = strlen(lo_nack_buffer);
+
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;      // use IPv4 or IPv6, whichever
@@ -82,13 +146,35 @@ int main(int argc, char *argv[])
         buf[num_bytes] = '\0';
         printf("SERVER : received : %s \n", buf);
 
+        if (0){ // need to check login message for authentication here (i simply did 1 for now)
+            if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
+            {
+                perror("send");
+                close(sockfd);
+                exit(0);
+            }
+
+            printf("Client has been authenicated and joined connection\n");
+        }
+        else{  //if authentication failed send a lo_nack message and continue searching for clients
+            if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1)
+            {
+                perror("send");
+                close(sockfd);
+                exit(0);
+            }
+            printf("Client Authenication Failed\n");
+            continue;
+
+        }
+
 
         while(num_bytes != 0){  // this loop makes sure we keep listening to our client until it closes
             num_bytes = 0;
             if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
                 close(new_fd);
-                printf("closing connection\n");
+                printf("Client has closed connection\n");
                 perror("recv finished");
                 break;
             }
