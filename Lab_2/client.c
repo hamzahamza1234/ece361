@@ -19,6 +19,7 @@
 #define STDIN 0
 
 bool quit = false;
+bool in_session = false;
 
 struct message
 {
@@ -28,6 +29,9 @@ struct message
     char data[MAXDATASIZE];
 };
 
+//defining some predefined messages
+struct message query;
+
 int main(int argc, char *argv[])
 {
     int sockfd;          // to hold the socket file descriptor
@@ -36,6 +40,7 @@ int main(int argc, char *argv[])
     int rv;
     int numbytes;
     char s[INET_ADDRSTRLEN];
+    char zero[100] = {'0'};
 
     // variales needed for login
     char client_name[100];
@@ -47,8 +52,9 @@ int main(int argc, char *argv[])
     fd_set read_fds; //for the select system call
 
 
-   // Main While loop that the client will stay in regardless of weather its connected or not
-   // Only way to exit this is my typing /quit
+
+    // Main While loop that the client will stay in regardless of weather its connected or not
+    // Only way to exit this is my typing /quit
     while(1){
 
         FD_ZERO(&read_fds); // make sure its zerod out before every new connection
@@ -243,6 +249,34 @@ int main(int argc, char *argv[])
 
     printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
 
+    // we can define the simple query message now since it wont change
+
+    // predifing the query message
+    // defining the lo ack message so early because it doesnt change
+
+    query.type = 12; // index based on the table in the document
+    query.size = 0;
+
+    strcat(query.source, client_name);
+    strncat(query.data, zero, 2);
+
+    char query_buffer[4096] = {'\0'};
+
+    sprintf(num_buffer, "%d", query.type);
+    strcat(query_buffer, num_buffer);
+    strcat(query_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", query.size);
+    strcat(query_buffer, num_buffer);
+    strcat(query_buffer, colon_str);
+
+    strcat(query_buffer, query.source);
+    strcat(query_buffer, colon_str);
+
+    strcat(query_buffer, query.data);
+
+    int len_query_msg = strlen(query_buffer);
+
     while(1){
         // inside here I am logged in to the server 
 
@@ -253,6 +287,7 @@ int main(int argc, char *argv[])
         FD_SET(sockfd,&read_fds); // add the socket file descriptor
 
 
+
         //still need to implement joining a session as that is when we will actually be reading from stdin and sockfd,
 
         //for now i will simply implement it here. if there is data from the server i will print it in output, if i type anything in terminal 
@@ -260,8 +295,70 @@ int main(int argc, char *argv[])
 
         char str[MAXDATASIZE];
 
-    
-  
+         fgets(str, MAXDATASIZE, stdin);
+            int len = strlen(str);
+
+            char exit_msg[100] = "/logout\n";
+
+            if (strcmp(str, exit_msg) == 0)
+            {
+                break;
+            }
+
+            if (strcmp(str, "/quit\n") == 0)
+            { // the only way to exit the program
+                printf("Terminating Program\n");
+                quit = true;
+                break;
+            }
+
+            if (strcmp(str, "/list\n") == 0)
+            { // Ask for list from server
+
+               printf("Querying server for list\n");
+                if (send(sockfd, query_buffer, len_query_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                char buf3[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf3, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf3[num_bytes] = '\0';
+
+                //here i should recieve a QU_ack message il just print it for now
+                printf("Client : received : %s \n", buf3);
+
+                printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+
+                continue;
+            }
+
+
+        
+
+
+        
+        if (!in_session){
+         printf("Cant send messages if not in session, please type /list to see the list of sessions or create your own.\n");
+         printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+
+         continue;
+        }
+
+
+
+
+        while (in_session){
+
 
         if (select(sockfd+1, &read_fds, NULL, NULL, NULL) < 0){
             perror("select error");
@@ -312,6 +409,8 @@ int main(int argc, char *argv[])
 
             printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
         }
+
+    }
 
         }
 

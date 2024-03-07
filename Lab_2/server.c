@@ -21,9 +21,12 @@ struct message
     char data[MAXDATASIZE];
 };
 
-// Defining the LO_ACK message 
+// Defining some predefined message 
 struct message lo_ack;
 struct message lo_nack;
+struct message qu_ack;
+
+// we also need to define a list of usernames and passwords that we will use to authenticate the users of our network
 
 int main(int argc, char *argv[])
 {
@@ -43,6 +46,7 @@ int main(int argc, char *argv[])
 
     lo_ack.type = 2; //index based on the table in the document
     lo_ack.size = 0;
+
     strncat(lo_ack.source, zero, 2);
     strncat(lo_ack.data,zero , 2);
 
@@ -88,6 +92,7 @@ int main(int argc, char *argv[])
     strcat(lo_nack_buffer, lo_nack.data);
 
     int len_lo_nack_msg = strlen(lo_nack_buffer);
+
 
 
     memset(&hints, 0, sizeof hints);
@@ -182,6 +187,20 @@ int main(int argc, char *argv[])
             }
             buf[num_bytes] = '\0';
             printf("SERVER : received : %s \n", buf);
+
+            if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
+
+               printf("Sending QU_ACK back to client. \n");
+
+                if (send(new_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                continue;
+            }
 
             printf("Sending the message Back to Client. \n");
 
