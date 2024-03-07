@@ -20,6 +20,7 @@
 
 bool quit = false;
 bool in_session = false;
+bool logout = false;
 
 struct message
 {
@@ -56,6 +57,8 @@ int main(int argc, char *argv[])
     // Main While loop that the client will stay in regardless of weather its connected or not
     // Only way to exit this is my typing /quit
     while(1){
+
+        logout = false;
 
         FD_ZERO(&read_fds); // make sure its zerod out before every new connection
 
@@ -280,39 +283,41 @@ int main(int argc, char *argv[])
     while(1){
         // inside here I am logged in to the server 
 
-
         //once we are logged into the server we can add the sockfd into our read_set for multiplexing
+
+        if (quit || logout){
+            break;
+        }
+
+        FD_ZERO(&read_fds);
 
         FD_SET(0,&read_fds ); //add stdin
         FD_SET(sockfd,&read_fds); // add the socket file descriptor
 
-
-
-        //still need to implement joining a session as that is when we will actually be reading from stdin and sockfd,
-
-        //for now i will simply implement it here. if there is data from the server i will print it in output, if i type anything in terminal 
-        // i will send it to server
 
         char str[MAXDATASIZE];
 
          fgets(str, MAXDATASIZE, stdin);
             int len = strlen(str);
 
-            char exit_msg[100] = "/logout\n";
+             str[strcspn(str, "\n")] = 0; // to remove the new line character
+
+            char exit_msg[100] = "/logout";
+            char join_ses_msg[100] = "/joinsession ";
 
             if (strcmp(str, exit_msg) == 0)
             {
                 break;
             }
 
-            if (strcmp(str, "/quit\n") == 0)
+            if (strcmp(str, "/quit") == 0)
             { // the only way to exit the program
                 printf("Terminating Program\n");
                 quit = true;
                 break;
             }
 
-            if (strcmp(str, "/list\n") == 0)
+            if (strcmp(str, "/list") == 0)
             { // Ask for list from server
 
                printf("Querying server for list\n");
@@ -343,26 +348,106 @@ int main(int argc, char *argv[])
             }
 
 
-        
+        //lets check if they want to do sessional commands
+
+            char sess_command[MAXDATASIZE];
+
+            strncpy(sess_command, str,13 );
+            if (strcmp(sess_command, join_ses_msg) == 0){
+                printf("Client wants to join a session \n");
+
+                //lets make the join message and send it
+
+                struct message join_msg;
+
+                join_msg.type = 5;
+                strcat(join_msg.source, client_name);
+                strncat(join_msg.data, str + 13, 100);
+                join_msg.size = strlen(join_msg.data);
+
+                char join_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", join_msg.type);
+                strcat(join_buffer, num_buffer);
+                strcat(join_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", join_msg.size);
+                strcat(join_buffer, num_buffer);
+                strcat(join_buffer, colon_str);
+
+                strcat(join_buffer, join_msg.source);
+                strcat(join_buffer, colon_str);
+
+                strcat(join_buffer, join_msg.data);
+
+                int len_join_msg = strlen(join_buffer);
+
+                printf ("Sending to server: %s\n", join_buffer);
+
+                if (send(sockfd, join_buffer, len_join_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                char buf4[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf4, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf4[num_bytes] = '\0';
+
+                // here i should recieve a JN_ack or JN_nack message il just print it for now
+                printf("Client : received : %s \n", buf4);
+
+                if (1){ // will implement checking the jn ack and jn nack message here (just 1 for now)
+                  in_session = true;
+                }else{
+                printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+                continue;
+                }
+
+            }
+            else{
+                char sess_command2[MAXDATASIZE];
+            strncpy(sess_command2, str,14 );
+            if (strcmp(sess_command, "/leavesession") == 0){
+                printf("Cant leave session without joining one, Try Again\n");
+                continue;
+            }
+            else{
+                strncpy(sess_command, str, 15);
+                if (strcmp(sess_command, "/createsession ") == 0)
+                {
+                    printf("Client wants to create a session \n");
+                }
+            }
+            }
 
 
-        
-        if (!in_session){
-         printf("Cant send messages if not in session, please type /list to see the list of sessions or create your own.\n");
-         printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+            if (!in_session)
+            {
+                printf("Cant send messages if not in session, please type /list to see the list of sessions or create your own.\n");
+                printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
 
-         continue;
+                continue;
         }
 
-
-
-
+        printf("Session Joined.\n");
+        // This will be last and final loop in which we will be in a session sending messages from stdin and recieving messages from server
         while (in_session){
 
+            printf("Enter the message to send or enter /leavesession to leave the session (or any relevant command) \n");
 
-        if (select(sockfd+1, &read_fds, NULL, NULL, NULL) < 0){
-            perror("select error");
-            exit(1);
+            if (select(sockfd + 1, &read_fds, NULL, NULL, NULL) < 0)
+            {
+                perror("select error");
+                exit(1);
         }
 
         if (FD_ISSET(sockfd, &read_fds)){
@@ -390,6 +475,8 @@ int main(int argc, char *argv[])
 
             if (strcmp(str, exit_msg) == 0)
             {
+                in_session = false;
+                logout = true;
                 break;
             }
 
@@ -400,6 +487,50 @@ int main(int argc, char *argv[])
                 break;
             }
 
+            strncpy(sess_command, str, 14);
+            if (strcmp(sess_command, "/leavesession\n") == 0)
+            {
+                printf("Leaving Session\n");
+                in_session = false;
+
+                //lets build the leave session message
+
+                struct message leave_sess_msg;
+                leave_sess_msg.type = 8; // number for leave session
+                leave_sess_msg.size = 0;
+
+                strcat(leave_sess_msg.source, client_name);
+                strncat(leave_sess_msg.data, zero, 2);
+
+                char leave_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", leave_sess_msg.type);
+                strcat(leave_buffer, num_buffer);
+                strcat(leave_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", leave_sess_msg.size);
+                strcat(leave_buffer, num_buffer);
+                strcat(leave_buffer, colon_str);
+
+                strcat(leave_buffer, query.source);
+                strcat(leave_buffer, colon_str);
+
+                strcat(leave_buffer, query.data);
+
+                int len_leave_msg = strlen(leave_buffer);
+
+                printf("Sending to server : %s\n", leave_buffer);
+
+                if (send(sockfd, leave_buffer, len_leave_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                break;
+            }
+
             if (send(sockfd, str, len, 0) == -1)
             {
                 perror("send");
@@ -407,11 +538,12 @@ int main(int argc, char *argv[])
                 exit(0);
             }
 
-            printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
         }
 
     }
-
+    if (!quit && !logout ){
+    printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+    }
         }
 
     printf("closing connection \n");

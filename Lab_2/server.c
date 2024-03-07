@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define BACKLOG 20
 #define MAXDATASIZE 100
@@ -25,6 +26,8 @@ struct message
 struct message lo_ack;
 struct message lo_nack;
 struct message qu_ack;
+
+bool in_session = false;
 
 // we also need to define a list of usernames and passwords that we will use to authenticate the users of our network
 
@@ -120,6 +123,8 @@ int main(int argc, char *argv[])
 
     while(1){
 
+        in_session = false;
+
         printf("looking for a new connextion\n");
 
         if (listen(sockfd, BACKLOG) == -1){
@@ -188,6 +193,8 @@ int main(int argc, char *argv[])
             buf[num_bytes] = '\0';
             printf("SERVER : received : %s \n", buf);
 
+
+
             if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
 
                printf("Sending QU_ACK back to client. \n");
@@ -202,13 +209,30 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            printf("Sending the message Back to Client. \n");
+            if (buf[0] == '5')
+            { // this means it is a join session message
 
-            if (send(new_fd, buf , num_bytes, 0) == -1)
-            {
-                perror("send");
-                close(sockfd);
-                exit(0);
+               printf("Recieved the join request from client. \n");
+               printf("Sending JN_ack or JN_nack back to client. \n");
+
+                if (send(new_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session joining
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                continue;
+            }
+
+            if (buf[0] == '8')
+            { // this means it is a leave session message
+
+                printf("Recieved the leave request from client. \n");
+
+                //add whatever needed to make sure client isnt in session
+
+                continue;
             }
         }
 
