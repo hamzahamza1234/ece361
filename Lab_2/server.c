@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
             buf[num_bytes] = '\0';
             printf("SERVER : received : %s \n", buf);
 
-            printf("Sending '%s' Back to Client. \n" , buf);
+            printf("Sending the message Back to Client. \n");
 
             if (send(new_fd, buf , num_bytes, 0) == -1)
             {

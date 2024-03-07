@@ -241,6 +241,8 @@ int main(int argc, char *argv[])
         continue;
     }
 
+    printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+
     while(1){
         // inside here I am logged in to the server 
 
@@ -258,8 +260,8 @@ int main(int argc, char *argv[])
 
         char str[MAXDATASIZE];
 
-        // this is to get the filename from the terminal
-        printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+    
+  
 
         if (select(sockfd+1, &read_fds, NULL, NULL, NULL) < 0){
             perror("select error");
@@ -307,9 +309,9 @@ int main(int argc, char *argv[])
                 close(sockfd);
                 exit(0);
             }
+
+            printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
         }
-
-
 
         }
 
