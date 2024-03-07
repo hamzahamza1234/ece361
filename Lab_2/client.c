@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
 
             char exit_msg[100] = "/logout";
             char join_ses_msg[100] = "/joinsession ";
+            char create_ses_msg[100] = "/createsession ";
 
             if (strcmp(str, exit_msg) == 0)
             {
@@ -407,6 +408,7 @@ int main(int argc, char *argv[])
 
                 if (1){ // will implement checking the jn ack and jn nack message here (just 1 for now)
                   in_session = true;
+                  printf("Session Joined.\n");
                 }else{
                 printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
                 continue;
@@ -422,9 +424,69 @@ int main(int argc, char *argv[])
             }
             else{
                 strncpy(sess_command, str, 15);
-                if (strcmp(sess_command, "/createsession ") == 0)
+                if (strcmp(sess_command, create_ses_msg) == 0)
                 {
                     printf("Client wants to create a session \n");
+
+                    // lets make the create message and send it
+
+                    struct message create_msg;
+
+                    create_msg.type = 9; //code for create message
+                    strcat(create_msg.source, client_name);
+                    strncat(create_msg.data, str + 15, 100);
+                    create_msg.size = strlen(create_msg.data);
+
+                    char create_buffer[4096] = {'\0'};
+
+                    sprintf(num_buffer, "%d", create_msg.type);
+                    strcat(create_buffer, num_buffer);
+                    strcat(create_buffer, colon_str);
+
+                    sprintf(num_buffer, "%d", create_msg.size);
+                    strcat(create_buffer, num_buffer);
+                    strcat(create_buffer, colon_str);
+
+                    strcat(create_buffer, create_msg.source);
+                    strcat(create_buffer, colon_str);
+
+                    strcat(create_buffer, create_msg.data);
+
+                    int len_create_msg = strlen(create_buffer);
+
+                    printf("Sending to server: %s\n", create_buffer);
+
+                    if (send(sockfd, create_buffer, len_create_msg, 0) == -1)
+                    {
+                        perror("send");
+                        close(sockfd);
+                        exit(0);
+                    }
+
+                    char buf5[MAXDATASIZE];
+
+                    if ((num_bytes = recv(sockfd, buf5, MAXDATASIZE - 1, 0)) == 0)
+                    {
+                        close(sockfd);
+                        printf("closing connection\n");
+                        perror("recv fininshed");
+                        continue;
+                    }
+                    buf5[num_bytes] = '\0';
+
+                    // here i should recieve a NS_ACK message il just print it for now
+                    printf("Client : received : %s \n", buf5);
+
+                    if (1)
+                    { // will implement checking the NS_ack message checking here
+                        in_session = true;
+                        printf("Session Created. \n");
+                    }
+                    else
+                    {
+                        printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+                        continue;
+                    }
                 }
             }
             }
@@ -438,7 +500,7 @@ int main(int argc, char *argv[])
                 continue;
         }
 
-        printf("Session Joined.\n");
+        
         // This will be last and final loop in which we will be in a session sending messages from stdin and recieving messages from server
         while (in_session){
 
@@ -469,9 +531,12 @@ int main(int argc, char *argv[])
         {
 
             fgets(str, MAXDATASIZE, stdin);
+            
             int len = strlen(str);
 
-            char exit_msg[100] = "/logout\n";
+            str[strcspn(str, "\n")] = 0; // to remove the new line character
+
+            char exit_msg[100] = "/logout";
 
             if (strcmp(str, exit_msg) == 0)
             {
@@ -480,7 +545,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            if (strcmp(str, "/quit\n") == 0)
+            if (strcmp(str, "/quit") == 0)
             { // the only way to exit the program
                 printf("Terminating Program\n");
                 quit = true;
@@ -488,7 +553,7 @@ int main(int argc, char *argv[])
             }
 
             strncpy(sess_command, str, 14);
-            if (strcmp(sess_command, "/leavesession\n") == 0)
+            if (strcmp(sess_command, "/leavesession") == 0)
             {
                 printf("Leaving Session\n");
                 in_session = false;
@@ -529,6 +594,34 @@ int main(int argc, char *argv[])
                 }
 
                 break;
+            }
+
+            if (strcmp(str, "/list") == 0)
+            { // Ask for list from server
+
+                printf("Querying server for list\n");
+                if (send(sockfd, query_buffer, len_query_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                char buf3[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf3, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf3[num_bytes] = '\0';
+
+                // here i should recieve a QU_ack message il just print it for now
+                printf("Client : received : %s \n", buf3);
+
+                continue;
             }
 
             if (send(sockfd, str, len, 0) == -1)

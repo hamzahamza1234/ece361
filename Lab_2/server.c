@@ -197,7 +197,8 @@ int main(int argc, char *argv[])
 
             if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
 
-               printf("Sending QU_ACK back to client. \n");
+                printf("Recieved Query  request from client. \n");
+                printf("Sending QU_ACK back to client. \n");
 
                 if (send(new_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
                 {
@@ -216,6 +217,24 @@ int main(int argc, char *argv[])
                printf("Sending JN_ack or JN_nack back to client. \n");
 
                 if (send(new_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session joining
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                continue;
+            }
+
+            if (buf[0] == '9')
+            { // this means it is a create session message
+
+                printf("Recieved the create request from client. \n");
+                printf("Sending NS_ack back to client. \n");
+
+                //not much checking to do here because my client code can only send one create session message and only if it isnt already in one
+
+                if (send(new_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session creation
                 {
                     perror("send");
                     close(sockfd);
