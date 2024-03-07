@@ -16,6 +16,7 @@
 #define _OPEN_SYS_SOCK_IPV6
 #define MAXDATASIZE 100
 #define MAX_NAME 100
+#define STDIN 0
 
 bool quit = false;
 
@@ -43,9 +44,14 @@ int main(int argc, char *argv[])
     char server_p[100];
     int server_port;
 
+    fd_set read_fds; //for the select system call
+
+
    // Main While loop that the client will stay in regardless of weather its connected or not
    // Only way to exit this is my typing /quit
     while(1){
+
+        FD_ZERO(&read_fds); // make sure its zerod out before every new connection
 
         if (quit == true){
             break;
@@ -238,32 +244,74 @@ int main(int argc, char *argv[])
     while(1){
         // inside here I am logged in to the server 
 
-    char str[MAXDATASIZE];
 
-    // this is to get the filename from the terminal
-    printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
-    fgets(str,MAXDATASIZE, stdin );
-    int len = strlen(str);
+        //once we are logged into the server we can add the sockfd into our read_set for multiplexing
 
-    char exit_msg[100]= "/logout\n";
+        FD_SET(0,&read_fds ); //add stdin
+        FD_SET(sockfd,&read_fds); // add the socket file descriptor
 
-    if (strcmp(str,exit_msg) == 0){
-        break;
-    }
 
-    if (strcmp(str, "/quit\n") == 0)  { // the only way to exit the program
-        printf("Terminating Program\n");
-        quit = true;
-        break;
-    }
+        //still need to implement joining a session as that is when we will actually be reading from stdin and sockfd,
 
-    if (send(sockfd , str , len, 0) == -1){
-        perror("send");
-        close(sockfd);
-        exit(0);
-    }
+        //for now i will simply implement it here. if there is data from the server i will print it in output, if i type anything in terminal 
+        // i will send it to server
 
-    }
+        char str[MAXDATASIZE];
+
+        // this is to get the filename from the terminal
+        printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+
+        if (select(sockfd+1, &read_fds, NULL, NULL, NULL) < 0){
+            perror("select error");
+            exit(1);
+        }
+
+        if (FD_ISSET(sockfd, &read_fds)){
+
+            char buf2[MAXDATASIZE];
+
+            if ((num_bytes = recv(sockfd, buf2, MAXDATASIZE - 1, 0)) == 0)
+            {
+                close(sockfd);
+                printf("closing connection\n");
+                perror("recv fininshed");
+                continue;
+            }
+            buf2[num_bytes] = '\0';
+            printf("Client : received : %s \n", buf2);
+        }
+
+        if (FD_ISSET(0, &read_fds))
+        {
+
+            fgets(str, MAXDATASIZE, stdin);
+            int len = strlen(str);
+
+            char exit_msg[100] = "/logout\n";
+
+            if (strcmp(str, exit_msg) == 0)
+            {
+                break;
+            }
+
+            if (strcmp(str, "/quit\n") == 0)
+            { // the only way to exit the program
+                printf("Terminating Program\n");
+                quit = true;
+                break;
+            }
+
+            if (send(sockfd, str, len, 0) == -1)
+            {
+                perror("send");
+                close(sockfd);
+                exit(0);
+            }
+        }
+
+
+
+        }
 
     printf("closing connection \n");
 

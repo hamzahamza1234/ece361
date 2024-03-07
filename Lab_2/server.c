@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
         buf[num_bytes] = '\0';
         printf("SERVER : received : %s \n", buf);
 
-        if (0){ // need to check login message for authentication here (i simply did 1 for now)
+        if (1){ // need to check login message for authentication here (i simply did 1 for now)
             if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
             {
                 perror("send");
@@ -168,8 +168,10 @@ int main(int argc, char *argv[])
 
         }
 
+        // this loop makes sure we keep listening to our client until it closes and echoing the message back
+        // I have added this echo to make sure my client is able to both read from server and stdin at the same time
 
-        while(num_bytes != 0){  // this loop makes sure we keep listening to our client until it closes
+        while(num_bytes != 0){  
             num_bytes = 0;
             if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
@@ -180,6 +182,15 @@ int main(int argc, char *argv[])
             }
             buf[num_bytes] = '\0';
             printf("SERVER : received : %s \n", buf);
+
+            printf("Sending '%s' Back to Client. \n" , buf);
+
+            if (send(new_fd, buf , num_bytes, 0) == -1)
+            {
+                perror("send");
+                close(sockfd);
+                exit(0);
+            }
         }
 
 
