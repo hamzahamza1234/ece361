@@ -30,6 +30,7 @@ struct message
     char data[MAXDATASIZE];
 };
 
+
 //defining some predefined messages
 struct message query;
 
@@ -72,7 +73,16 @@ int main(int argc, char *argv[])
         struct message msg;   //this struct will store the first login_msg sent to server
 
         printf("New Client has started, Please enter a command\n");
-        fgets(command, MAXDATASIZE, stdin);  //using fgets because scanf terminates after whitespaces
+        fgets(command, 4096, stdin);  //using fgets because scanf terminates after whitespaces
+
+        if (strlen(command) == 0){
+            printf("Empty space is not allowed. \n");
+            continue;
+        }
+        if (strlen(command) > MAXDATASIZE){
+            printf("Please Remain within 100 characters.\n");
+            continue;
+        }
 
         //check for /quit or /login first because only those commands can be done first
         char login_check[4096];
@@ -297,8 +307,16 @@ int main(int argc, char *argv[])
 
         char str[MAXDATASIZE];
 
-         fgets(str, MAXDATASIZE, stdin);
+         fgets(str, 4096, stdin);
             int len = strlen(str);
+        if (len  == 0){
+            printf("Empty space is not allowed. \n");
+            continue;
+        }
+        if (len > MAXDATASIZE){
+            printf("Please Remain within 100 characters.\n");
+            continue;
+        }
 
              str[strcspn(str, "\n")] = 0; // to remove the new line character
 
@@ -533,6 +551,15 @@ int main(int argc, char *argv[])
             fgets(str, MAXDATASIZE, stdin);
             
             int len = strlen(str);
+
+        if (len  == 0){
+            printf("Empty space is not allowed. \n");
+            continue;
+        }
+        if (len  > MAXDATASIZE){
+            printf("Please Remain within 100 characters.\n");
+            continue;
+        }
 
             str[strcspn(str, "\n")] = 0; // to remove the new line character
 
