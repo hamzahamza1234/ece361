@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         printf("New Client has started, Please enter a command\n");
         fgets(command, 4096, stdin);  //using fgets because scanf terminates after whitespaces
 
-        if (strlen(command) == 0){
+        if (strlen(command) == 1){
             printf("Empty space is not allowed. \n");
             continue;
         }
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
 
          fgets(str, 4096, stdin);
             int len = strlen(str);
-        if (len  == 0){
+        if (len  == 1){
             printf("Empty space is not allowed. \n");
             continue;
         }
@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
             
             int len = strlen(str);
 
-        if (len  == 0){
+        if (len  == 1){
             printf("Empty space is not allowed. \n");
             continue;
         }
