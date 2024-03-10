@@ -6,13 +6,19 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <time.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
+#include <math.h>
+#include <ctype.h>
 #include <stdbool.h>
 
 #define BACKLOG 20
 #define MAXDATASIZE 100
 #define MAX_NAME 100
+#define MAX_PSWRD 100
+#define MAX_SESSION 100
+#define NUM_USERS 5
 
 struct message
 {
@@ -22,6 +28,23 @@ struct message
     char data[MAXDATASIZE];
 };
 
+typedef struct client_info
+{
+    char username[MAX_NAME];
+    char password[MAX_PSWRD];
+    bool logged_in;
+    char cur_session[MAX_SESSION];
+    int port_fd;
+} Client;
+
+typedef struct session_info
+{
+    char name[MAX_SESSION];
+    int num_users;
+    bool active;
+} Session;
+
+
 // Defining some predefined message 
 struct message lo_ack;
 struct message lo_nack;
@@ -29,7 +52,22 @@ struct message qu_ack;
 
 bool in_session = false;
 
-// we also need to define a list of usernames and passwords that we will use to authenticate the users of our network
+// List of usernames and passwords that we will use to authenticate the users of our network
+Client client_list[NUM_USERS] = {
+    {"Hamza", "12345", false, ""},
+    {"Caitlin", "67890", false, ""},
+    {"Guest", "asdf", false, ""},
+    {"Bob", "123abc", false, ""},
+    {"Sally123!", "ca$h", false, ""},
+};
+
+Session session_list[NUM_USERS] = {
+    {"", 0, false},
+    {"", 0, false},
+    {"", 0, false},
+    {"", 0, false},
+    {"", 0, false},
+};
 
 int main(int argc, char *argv[])
 {
@@ -44,6 +82,8 @@ int main(int argc, char *argv[])
     addr_size = sizeof(from_addr);
 
     char buffer[4096]; // to hold the message reciever
+
+    fd_set read_fds; //for the select system call
 
     //defining the lo ack message so early because it doesnt change
 
@@ -125,7 +165,7 @@ int main(int argc, char *argv[])
 
         in_session = false;
 
-        printf("looking for a new connextion\n");
+        printf("looking for a new connection\n");
 
         if (listen(sockfd, BACKLOG) == -1){
             perror("listen failed");
