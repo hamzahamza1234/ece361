@@ -174,6 +174,8 @@ int main(int argc, char *argv[])
         }
 
         int max_fd = sockfd;
+        printf("========================\n");
+        printf("%d\n", sockfd);
 
         FD_ZERO(&read_fds);
 
@@ -185,8 +187,10 @@ int main(int argc, char *argv[])
                 if (client_list[i].port_fd > max_fd) {
                     max_fd = client_list[i].port_fd;
                 }
+                printf("%d\n", client_list[i].port_fd);
             }
         }
+        printf("========================\n");
 
         if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
             perror("select error");
@@ -282,7 +286,7 @@ int main(int argc, char *argv[])
             int client_index = -1;
             // Looping through the file descriptors of the active clients
             for (int i = 0; i < NUM_USERS; i++) {
-                if (client_list[i].logged_in && (client_list[i].port_fd, &read_fds)) {
+                if (client_list[i].logged_in && FD_ISSET(client_list[i].port_fd, &read_fds)) {
                     cur_fd = client_list[i].port_fd;
                     client_index = i;
                 }
