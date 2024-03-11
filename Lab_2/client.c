@@ -544,7 +544,34 @@ int main(int argc, char *argv[])
                 continue;
             }
             buf2[num_bytes] = '\0';
-            printf("Client : received : %s \n", buf2);
+         //   printf("Client : received : %s \n", buf2);
+
+            struct message msg_chat = {0, 0, "", ""};
+
+            // Converting the buffer to a message struct
+            sscanf(buf2, "%u:%u:", &msg_chat.type, &msg_chat.size);
+
+            int name_start_index = 0, name_end_index = 0, num_colon = 0;
+            for (int i = 0; i < num_bytes; i++)
+            {
+                if (buf2[i] == ':')
+                {
+                    num_colon++;
+                    if (num_colon == 2)
+                    {
+                        name_start_index = i + 1;
+                    }
+                    if (num_colon == 3)
+                    {
+                        name_end_index = i;
+                    }
+                }
+            }
+            memcpy(msg_chat.source, &buf2[name_start_index], name_end_index - name_start_index);
+            memcpy(msg_chat.data, &buf2[name_end_index + 1], msg_chat.size);
+
+
+            printf("Client Recieved a message from %s: %s \n",msg_chat.source, msg_chat.data);
         }
 
         if (FD_ISSET(STDIN, &read_fds))
