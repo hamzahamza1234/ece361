@@ -292,6 +292,8 @@ int main(int argc, char *argv[])
                 }
             }
 
+            assert(cur_fd!=-1 && client_index != -1); // TODO: Remove assert once confident
+
             int num_bytes = 0;
             if ((num_bytes = recv(cur_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
@@ -355,8 +357,25 @@ int main(int argc, char *argv[])
             if (buf[0] == '5')
             { // this means it is a join session message
 
-               printf("Recieved the join request from client. \n");
-               printf("Sending JN_ack or JN_nack back to client. \n");
+                printf("Recieved the join request from client. \n");
+                printf("Sending JN_ack or JN_nack back to client. \n");
+
+                bool joined_session = false;
+
+                // Finding the requested session
+                for (int i; i < NUM_USERS; i++) {
+                    if (session_list[i].active && (strcmp(session_list[i].name, msg.data) == 0)) {
+                        session_list[i].num_users++;
+                        strncpy(client_list[client_index].cur_session, msg.data, msg.size);
+                        joined_session = true;
+                    }
+                }
+
+                if (joined_session) {
+                    // Send ACK
+                } else { //TODO: specify reason for NACK
+                    // Send NACK
+                }
 
                 if (send(cur_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session joining
                 {
