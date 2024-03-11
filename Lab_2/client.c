@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
 
                 //lets make the join message and send it
 
-                struct message join_msg;
+                struct message join_msg = {0, 0, "", ""};
 
                 join_msg.type = 5;
                 strcat(join_msg.source, client_name);
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
 
                     // lets make the create message and send it
 
-                    struct message create_msg;
+                    struct message create_msg = {0, 0, "", ""};
 
                     create_msg.type = 9; //code for create message
                     strcat(create_msg.source, client_name);
@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
 
                 //lets build the leave session message
 
-                struct message leave_sess_msg;
+                struct message leave_sess_msg = {0, 0, "", ""};
                 leave_sess_msg.type = 8; // number for leave session
                 leave_sess_msg.size = 0;
 
