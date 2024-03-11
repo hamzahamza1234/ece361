@@ -651,7 +651,34 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (send(sockfd, str, len, 0) == -1) // TODO: messages need to be sent in the struct message format
+            //struct
+
+            struct message chat_data;
+
+            chat_data.type = 11; //for message
+            chat_data.size = len;
+
+            strcat(chat_data.source, client_name);
+            strncat(chat_data.data, str, 100);
+
+            char message_data_buffer[4096] = {'\0'};
+
+            sprintf(num_buffer, "%d", chat_data.type);
+            strcat(message_data_buffer, num_buffer);
+            strcat(message_data_buffer, colon_str);
+
+            sprintf(num_buffer, "%d", chat_data.size);
+            strcat(message_data_buffer, num_buffer);
+            strcat(message_data_buffer, colon_str);
+
+            strcat(message_data_buffer, chat_data.source);
+            strcat(message_data_buffer, colon_str);
+
+            strcat(message_data_buffer, chat_data.data);
+
+            int main_len = strlen(message_data_buffer);
+
+            if (send(sockfd, message_data_buffer, main_len, 0) == -1)
             {
                 perror("send");
                 close(sockfd);
