@@ -424,10 +424,11 @@ int main(int argc, char *argv[])
                 // here i should recieve a JN_ack or JN_nack message il just print it for now
                 printf("Client : received : %s \n", buf4);
 
-                if (1){ // will implement checking the jn ack and jn nack message here (just 1 for now)
+                if (buf4[0] == '6'){ // will implement checking the jn ack and jn nack message here (just 1 for now)
                   in_session = true;
                   printf("Session Joined.\n");
                 }else{
+                    printf("join session failed, session doesnt exist. Please Try again.\n");
                 printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
                 continue;
                 }
