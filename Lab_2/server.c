@@ -174,8 +174,8 @@ int main(int argc, char *argv[])
         }
 
         int max_fd = sockfd;
-        printf("========================\n");
-        printf("%d\n", sockfd);
+        //printf("========================\n");
+        //printf("%d\n", sockfd);
 
         FD_ZERO(&read_fds);
 
@@ -187,10 +187,10 @@ int main(int argc, char *argv[])
                 if (client_list[i].port_fd > max_fd) {
                     max_fd = client_list[i].port_fd;
                 }
-                printf("%d\n", client_list[i].port_fd);
+                //printf("%d\n", client_list[i].port_fd);
             }
         }
-        printf("========================\n");
+        //printf("========================\n");
 
         if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
             perror("select error");
@@ -311,9 +311,33 @@ int main(int argc, char *argv[])
             buf[num_bytes] = '\0';
             printf("SERVER : received : %s \n", buf);
 
+            struct message msg = {0, 0, "", ""};
 
+            // Converting the buffer to a message struct
+            sscanf(buf, "%u:%u:", &msg.type, &msg.size);
+                
+            int name_start_index = 0, name_end_index = 0, num_colon = 0;
+            for (int i = 0; i < num_bytes; i++) {
+                if (buf[i] == ':') {
+                    num_colon++;
+                    if (num_colon == 2) {
+                        name_start_index = i + 1;
+                    }
+                    if (num_colon == 3) {
+                        name_end_index = i;
+                    }
+                }
+            }
+            memcpy(msg.source, &buf[name_start_index], name_end_index - name_start_index);
+            memcpy(msg.data, &buf[name_end_index + 1], msg.size);
 
             if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
+
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (session_list[i].active) {
+                        printf("%s\n", session_list[i].name);
+                    }
+                }
 
                 printf("Recieved Query  request from client. \n");
                 printf("Sending QU_ACK back to client. \n");
@@ -349,6 +373,23 @@ int main(int argc, char *argv[])
 
                 printf("Recieved the create request from client. \n");
                 printf("Sending NS_ack back to client. \n");
+
+                bool created_session = false;
+
+                // Find the first inactive session in the session list
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (!session_list[i].active) {
+                        // Updating all necessary info
+                        strncpy(session_list[i].name, msg.data, msg.size);
+                        strncpy(client_list[client_index].cur_session, msg.data, msg.size);
+                        session_list[i].active = true;
+                        session_list[i].num_users = 1;
+                        created_session = true;
+                        break;
+                    }
+                }
+
+                assert(created_session); // TODO: Remove this assert once confident
 
                 //not much checking to do here because my client code can only send one create session message and only if it isnt already in one
 

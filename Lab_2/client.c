@@ -651,7 +651,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (send(sockfd, str, len, 0) == -1)
+            if (send(sockfd, str, len, 0) == -1) // TODO: messages need to be sent in the struct message format
             {
                 perror("send");
                 close(sockfd);
