@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
                     }
                 }*/
                 client_list[client_index].logged_in = false;
-                for (int i = 0; i < NUM_USERS; i++) { // TODO: possibly determine the index of the user's server in the loop that finds client index
+                for (int i = 0; i < NUM_USERS; i++) { // TODO: possibly determine the index of the user's session in the loop that finds client index
                     if(session_list[i].active && (strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
                         session_list[i].num_users--;
                         if (session_list[i].num_users == 0) {
@@ -519,6 +519,41 @@ int main(int argc, char *argv[])
                             session_list[i].name[0] = '\0';
                         }
                         client_list[client_index].cur_session[0] = '\0';
+                    }
+                }
+
+
+                continue;
+            }
+
+            if (msg.type == 11)
+            { // this means it is a message packet
+
+                printf("Recieved message from client. \n");
+
+                int session_index = -1;
+
+                // Finding the session the client is in
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (session_list[i].active && (strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
+                        session_index = i;
+                    }
+                }
+
+                if (session_list[session_index].num_users == 1) {
+                    // There are no other clients in the same session
+                    continue;
+                }
+
+                // Sending the message to all clients in the same session
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (i != client_index && client_list[i].logged_in && (strcmp(session_list[session_index].name, client_list[i].cur_session) == 0)) {
+                        if (send(client_list[i].port_fd, buf, num_bytes, 0) == -1)
+                        {
+                            perror("send");
+                            close(sockfd);
+                            exit(0);
+                        }
                     }
                 }
 
