@@ -379,15 +379,79 @@ int main(int argc, char *argv[])
 
                 if (joined_session) {
                     // Send ACK
+                    // Generating ACK message
+                    struct message jn_ACK = {0, 0, "", ""};
+
+                    jn_ACK.type = 6;
+                    jn_ACK.size = msg.size;
+                    strncat(jn_ACK.source, zero, 2);
+                    strncpy(jn_ACK.data, msg.data, msg.size);
+
+                    
+                    char jn_ack_buffer[4096] = {'\0'};
+                    char number_buffer[4096] = {'\0'};
+
+                    sprintf(number_buffer, "%d", jn_ACK.type);
+                    strcat(jn_ack_buffer, number_buffer);
+                    strcat(jn_ack_buffer, colon_str);
+
+                    sprintf(number_buffer, "%d", jn_ACK.size);
+                    strcat(jn_ack_buffer, number_buffer);
+                    strcat(jn_ack_buffer, colon_str);
+
+                    strcat(jn_ack_buffer, jn_ACK.source);
+                    strcat(jn_ack_buffer, colon_str);
+
+                    strcat(jn_ack_buffer, jn_ACK.data);
+
+                    int len_jn_ack_msg = strlen(jn_ack_buffer);
+
+                    if (send(cur_fd, jn_ack_buffer, len_jn_ack_msg, 0) == -1)
+                    {
+                        perror("send");
+                        close(sockfd);
+                        exit(0);
+                    }
+                    printf("Sent JN_ACK to client.\n");
                 } else { //TODO: specify reason for NACK
                     // Send NACK
-                }
+                    // Generating NACK message
+                    struct message jn_NAK = {0, 0, "", ""};
 
-                if (send(cur_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session joining
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
+                    char nak_reason[100] = ", session doesn't exist.";
+
+                    jn_NAK.type = 7;
+                    jn_NAK.size = msg.size + strlen(nak_reason);
+                    strncat(jn_NAK.source, zero, 2);
+                    strncpy(jn_NAK.data, msg.data, msg.size);
+
+                    
+                    char jn_nak_buffer[4096] = {'\0'};
+                    char number_buffer[4096] = {'\0'};
+
+                    sprintf(number_buffer, "%d", jn_NAK.type);
+                    strcat(jn_nak_buffer, number_buffer);
+                    strcat(jn_nak_buffer, colon_str);
+
+                    sprintf(number_buffer, "%d", jn_NAK.size);
+                    strcat(jn_nak_buffer, number_buffer);
+                    strcat(jn_nak_buffer, colon_str);
+
+                    strcat(jn_nak_buffer, jn_NAK.source);
+                    strcat(jn_nak_buffer, colon_str);
+
+                    strcat(jn_nak_buffer, jn_NAK.data);
+                    strcat(jn_nak_buffer, nak_reason);
+
+                    int len_jn_nak_msg = strlen(jn_nak_buffer);
+
+                    if (send(cur_fd, jn_nak_buffer, len_jn_nak_msg, 0) == -1)
+                    {
+                        perror("send");
+                        close(sockfd);
+                        exit(0);
+                    }
+                    printf("Sent JN_NAK to client.\n");
                 }
 
                 continue;
