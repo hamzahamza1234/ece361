@@ -299,10 +299,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        FD_ZERO(&read_fds);
-
-        FD_SET(0,&read_fds ); //add stdin
-        FD_SET(sockfd,&read_fds); // add the socket file descriptor
+  
 
 
         char str[MAXDATASIZE];
@@ -522,6 +519,10 @@ int main(int argc, char *argv[])
         
         // This will be last and final loop in which we will be in a session sending messages from stdin and recieving messages from server
         while (in_session){
+            FD_ZERO(&read_fds);
+
+            FD_SET(STDIN, &read_fds);  // add stdin
+            FD_SET(sockfd, &read_fds); // add the socket file descriptor
 
             printf("Enter the message to send or enter /leavesession to leave the session (or any relevant command) \n");
 
@@ -546,7 +547,7 @@ int main(int argc, char *argv[])
             printf("Client : received : %s \n", buf2);
         }
 
-        if (FD_ISSET(0, &read_fds))
+        if (FD_ISSET(STDIN, &read_fds))
         {
 
             fgets(str, MAXDATASIZE, stdin);
