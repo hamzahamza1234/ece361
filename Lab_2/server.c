@@ -43,6 +43,7 @@ typedef struct session_info
     char name[MAX_SESSION];
     int num_users;
     bool active;
+    int size; // Length of name
 } Session;
 
 
@@ -63,11 +64,11 @@ Client client_list[NUM_USERS] = {
 };
 
 Session session_list[NUM_USERS] = {
-    {"", 0, false},
-    {"", 0, false},
-    {"", 0, false},
-    {"", 0, false},
-    {"", 0, false},
+    {"", 0, false, 0},
+    {"", 0, false, 0},
+    {"", 0, false, 0},
+    {"", 0, false, 0},
+    {"", 0, false, 0},
 };
 
 int main(int argc, char *argv[])
@@ -303,7 +304,7 @@ int main(int argc, char *argv[])
                         client_list[i].logged_in = false;
                     }
                 }*/
-                client_list[client_index].logged_in = false;
+                client_list[client_index].logged_in = false; // TODO: remove client from whatever server they are in
                 close(cur_fd);
                 printf("Client has closed connection\n");
                 perror("recv finished");
@@ -333,11 +334,16 @@ int main(int argc, char *argv[])
             memcpy(msg.source, &buf[name_start_index], name_end_index - name_start_index);
             memcpy(msg.data, &buf[name_end_index + 1], msg.size);
 
-            if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
+            if (msg.type == 12) { // this means it is a query message
 
                 for (int i = 0; i < NUM_USERS; i++) {
                     if (session_list[i].active) {
                         printf("%s\n", session_list[i].name);
+                    }
+                }
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (client_list[i].logged_in) {
+                        printf("%s\n", client_list[i].username);
                     }
                 }
 
@@ -354,7 +360,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (buf[0] == '5')
+            if (msg.type == 5)
             { // this means it is a join session message
 
                 printf("Recieved the join request from client. \n");
@@ -363,8 +369,8 @@ int main(int argc, char *argv[])
                 bool joined_session = false;
 
                 // Finding the requested session
-                for (int i; i < NUM_USERS; i++) {
-                    if (session_list[i].active && (strcmp(session_list[i].name, msg.data) == 0)) {
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (session_list[i].active && (session_list[i].size == msg.size) && (strncmp(session_list[i].name, msg.data, msg.size) == 0)) {
                         session_list[i].num_users++;
                         strncpy(client_list[client_index].cur_session, msg.data, msg.size);
                         joined_session = true;
@@ -387,7 +393,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (buf[0] == '9')
+            if (msg.type == 9)
             { // this means it is a create session message
 
                 printf("Recieved the create request from client. \n");
@@ -403,6 +409,7 @@ int main(int argc, char *argv[])
                         strncpy(client_list[client_index].cur_session, msg.data, msg.size);
                         session_list[i].active = true;
                         session_list[i].num_users = 1;
+                        session_list[i].size = msg.size;
                         created_session = true;
                         break;
                     }
@@ -422,14 +429,14 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (buf[0] == '8')
+            if (msg.type == 8)
             { // this means it is a leave session message
 
                 printf("Recieved the leave request from client. \n");
 
                 // Finding the session the client was in
                 for (int i = 0; i < NUM_USERS; i++) {
-                    if ((strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
+                    if (session_list[i].active && (strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
                         session_list[i].num_users--;
                         if (session_list[i].num_users == 0) {
                             // Setting the session as inactive since the last client left
