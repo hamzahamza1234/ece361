@@ -408,7 +408,19 @@ int main(int argc, char *argv[])
 
                 printf("Recieved the leave request from client. \n");
 
-                //add whatever needed to make sure client isnt in session
+                // Finding the session the client was in
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if ((strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
+                        session_list[i].num_users--;
+                        if (session_list[i].num_users == 0) {
+                            // Setting the session as inactive since the last client left
+                            session_list[i].active = false;
+                            session_list[i].name[0] = '\0';
+                        }
+                        client_list[client_index].cur_session[0] = '\0';
+                    }
+                }
+
 
                 continue;
             }
