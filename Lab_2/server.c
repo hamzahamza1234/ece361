@@ -304,7 +304,18 @@ int main(int argc, char *argv[])
                         client_list[i].logged_in = false;
                     }
                 }*/
-                client_list[client_index].logged_in = false; // TODO: remove client from whatever server they are in
+                client_list[client_index].logged_in = false;
+                for (int i = 0; i < NUM_USERS; i++) { // TODO: possibly determine the index of the user's server in the loop that finds client index
+                    if(session_list[i].active && (strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
+                        session_list[i].num_users--;
+                        if (session_list[i].num_users == 0) {
+                            // Setting the session as inactive since the last client left
+                            session_list[i].active = false;
+                            session_list[i].name[0] = '\0';
+                        }
+                        client_list[client_index].cur_session[0] = '\0';
+                    }
+                }
                 close(cur_fd);
                 printf("Client has closed connection\n");
                 perror("recv finished");
