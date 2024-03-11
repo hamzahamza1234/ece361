@@ -653,7 +653,7 @@ int main(int argc, char *argv[])
 
             //struct
 
-            struct message chat_data;
+            struct message chat_data = {0, 0, "", ""};
 
             chat_data.type = 11; //for message
             chat_data.size = len;
