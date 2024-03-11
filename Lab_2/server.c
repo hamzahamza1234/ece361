@@ -167,6 +167,21 @@ int main(int argc, char *argv[])
 
         printf("looking for a new connection\n");
 
+        FD_ZERO(&read_fds);
+
+        FD_SET(sockfd,&read_fds); // add the socket file descriptor
+        // Adding all the active client file descriptors
+        for (int i = 0; i < NUM_USERS; i++) {
+            if (client_list[i].logged_in) {
+                FD_SET(client_list[i].port_fd, &read_fds);
+            }
+        }
+
+        /*if (select(sockfd + 1, &read_fds, NULL, NULL, NULL) < 0) {
+            perror("select error");
+            exit(1);
+        }*/
+
         if (listen(sockfd, BACKLOG) == -1){
             perror("listen failed");
             exit(1);
@@ -196,7 +211,41 @@ int main(int argc, char *argv[])
         buf[num_bytes] = '\0';
         printf("SERVER : received : %s \n", buf);
 
-        if (1){ // need to check login message for authentication here (i simply did 1 for now)
+        bool valid_login = false;
+        struct message msg;
+
+        // Converting the buffer to a message struct
+        sscanf(buf, "%u:%u:", &msg.type, &msg.size);
+            
+        int name_start_index = 0, name_end_index = 0, num_colon = 0;
+        for (int i = 0; i < num_bytes; i++) {
+            if (buf[i] == ':') {
+                num_colon++;
+                if (num_colon == 2) {
+                    name_start_index = i + 1;
+                }
+                if (num_colon == 3) {
+                    name_end_index = i;
+                }
+            }
+        }
+        memcpy(msg.source, &buf[name_start_index], name_end_index - name_start_index);
+        memcpy(msg.data, &buf[name_end_index + 1], msg.size);
+
+        /*printf("MESSAGE\n");
+        printf("type:%u size:%u name:%s data: %s\n", msg.type, msg.size, msg.source, msg.data);*/
+
+        // Authenticating user
+        for (int i = 0; i < NUM_USERS; i++) {
+            if ((strcmp(msg.source, client_list[i].username) == 0) 
+                && (strcmp(msg.data, client_list[i].password) == 0)
+                && !(client_list[i].logged_in)) {
+                    valid_login = true;
+                    client_list[i].logged_in = true;
+            }
+        }
+
+        if (valid_login){ // need to check login message for authentication here (i simply did 1 for now)
             if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
             {
                 perror("send");
@@ -205,8 +254,7 @@ int main(int argc, char *argv[])
             }
 
             printf("Client has been authenicated and joined connection\n");
-        }
-        else{  //if authentication failed send a lo_nack message and continue searching for clients
+        } else {  //if authentication failed send a lo_nack message and continue searching for clients
             if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1)
             {
                 perror("send");

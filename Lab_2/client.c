@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
         char command[4096];
         char login_com[4096];
         
-        struct message msg;   //this struct will store the first login_msg sent to server
+        struct message msg = {0, 0, "", ""};   //this struct will store the first login_msg sent to server
 
         printf("New Client has started, Please enter a command\n");
         fgets(command, 4096, stdin);  //using fgets because scanf terminates after whitespaces
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
 
        msg.size = strlen(client_pass);
-       strncat(msg.source, client_name, 100);
+       strncat(msg.source, client_name, 100); // TODO: Should these be switched to strncpy()?
        strncat(msg.data, client_pass,100);   
 
     // At this point the first login message is ready to send 
