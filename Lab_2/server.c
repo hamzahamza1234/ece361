@@ -242,6 +242,8 @@ int main(int argc, char *argv[])
                 && !(client_list[i].logged_in)) {
                     valid_login = true;
                     client_list[i].logged_in = true;
+                    client_list[i].cur_session[0] = '\0';
+                    client_list[i].port_fd = new_fd;
             }
         }
 
@@ -255,7 +257,7 @@ int main(int argc, char *argv[])
 
             printf("Client has been authenicated and joined connection\n");
         } else {  //if authentication failed send a lo_nack message and continue searching for clients
-            if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1)
+            if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1) // TODO: lo_nack needs to include the reason for failure
             {
                 perror("send");
                 close(sockfd);
@@ -273,6 +275,12 @@ int main(int argc, char *argv[])
             num_bytes = 0;
             if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
+                // Find client to update info
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (client_list[i].port_fd == new_fd) {
+                        client_list[i].logged_in = false;
+                    }
+                }
                 close(new_fd);
                 printf("Client has closed connection\n");
                 perror("recv finished");
