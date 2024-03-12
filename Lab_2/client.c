@@ -686,6 +686,28 @@ int main(int argc, char *argv[])
                     close(sockfd);
                     exit(0);
                 }
+
+                int num_bytes = 0;
+                char buf10[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf10, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf10[num_bytes] = '\0';
+                printf("Client : received : %s \n", buf10);
+
+                if (buf10[0] == '1' && buf10[1] == '8')
+                { // means ack was recieved
+                    printf("USER FOUND, PRIVATE MESSAGE WILL BE SENT.\n");
+                }
+                else{
+                    printf("USER NOT FOUND, PRIVATE MESSAGE NOT SENT. TRY AGAIN\n");
+                }
+
                 continue;
             }
 
@@ -1110,6 +1132,28 @@ int main(int argc, char *argv[])
                     perror("send");
                     close(sockfd);
                     exit(0);
+                }
+
+                int num_bytes = 0;
+                char buf11[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf11, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf11[num_bytes] = '\0';
+                printf("Client : received : %s \n", buf11);
+
+                if (buf11[0] == '1' && buf11[1] == '8')
+                { // means ack was recieved
+                    printf("USER FOUND, PRIVATE MESSAGE WILL BE SENT.\n");
+                }
+                else
+                {
+                    printf("USER NOT FOUND, PRIVATE MESSAGE NOT SENT. TRY AGAIN\n");
                 }
                 continue;
             }

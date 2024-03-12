@@ -1,11 +1,14 @@
 New msg types:
 
-msg            type       source                        data
-/invite         14      the sending client's name        the client that we are inviting
-/accept         15      the client's name                the session they are joining
-/decline        16       the client's name               empty
-/priv           17      the sending client's name         the recieving client's name and the message with a space in between
+msg               type       source                        data
+/invite            14      the sending client's name        the client that we are inviting
+/accept            15      the client's name                the session they are joining
+/decline           16      the client's name                empty
+/priv              17      the sending client's name        the recieving client's name and the message with a space in between
+/p_valid           18      the server (zero)                empty (il print user found in client)
+/p_invalid         19      the server(zero)                 empty (il print user not found in client)
 
+all 4 implemented in client and skeleton in server
 
-added some skeleton to the bottom of the server.
-added sending invites from client
+the priv message only works with user hamza for now due to line 663, caitlin needs to implement that 
+

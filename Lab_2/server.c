@@ -51,6 +51,9 @@ typedef struct session_info
 struct message lo_ack;
 struct message lo_nack;
 struct message qu_ack;
+struct message p_valid;
+struct message p_invalid;
+
 
 bool in_session = false;
 
@@ -176,7 +179,55 @@ int main(int argc, char *argv[])
 
     int len_lo_nack_msg = strlen(lo_nack_buffer);
 
+    // defining the p_valid message
 
+    p_valid.type = 18; // index based on the table in the document
+    p_valid.size = 0;
+
+    strncat(p_valid.source, zero, 2);
+    strncat(p_valid.data, zero, 2);
+
+    char p_valid_buffer[4096] = {'\0'};
+
+    sprintf(num_buffer, "%d", p_valid.type);
+    strcat(p_valid_buffer, num_buffer);
+    strcat(p_valid_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", p_valid.size);
+    strcat(p_valid_buffer, num_buffer);
+    strcat(p_valid_buffer, colon_str);
+
+    strcat(p_valid_buffer, p_valid.source);
+    strcat(p_valid_buffer, colon_str);
+
+    strcat(p_valid_buffer, lo_ack.data);
+
+    int len_p_valid_msg = strlen(p_valid_buffer);
+
+    // defining the p_invalid message
+
+    p_invalid.type = 19; // index based on the table in the document
+    p_invalid.size = 0;
+
+    strncat(p_invalid.source, zero, 2);
+    strncat(p_invalid.data, zero, 2);
+
+    char p_invalid_buffer[4096] = {'\0'};
+
+    sprintf(num_buffer, "%d", p_invalid.type);
+    strcat(p_invalid_buffer, num_buffer);
+    strcat(p_invalid_buffer, colon_str);
+
+    sprintf(num_buffer, "%d", p_invalid.size);
+    strcat(p_invalid_buffer, num_buffer);
+    strcat(p_invalid_buffer, colon_str);
+
+    strcat(p_invalid_buffer, p_invalid.source);
+    strcat(p_invalid_buffer, colon_str);
+
+    strcat(p_invalid_buffer, lo_ack.data);
+
+    int len_p_invalid_msg = strlen(p_invalid_buffer);
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;      // use IPv4 or IPv6, whichever
@@ -656,7 +707,24 @@ int main(int argc, char *argv[])
                 printf("The client %s wants to send a private message \n", msg.source);
 
                 // TODO: Send message to the client (both client name and data are in data field)
-                // do not send any ack back
+                // if the name exists. send priv_valid_ack, if doesnt exist, send priv_invalid_ack
+
+                if(1) { //1 for now but need to implement checking of if name exists
+                    if (send(client_list[0].port_fd, p_valid_buffer, len_p_valid_msg, 0) == -1) // just client_list[0] for now, need to make it i when you use the for loop
+                    {
+                        perror("send");
+                        close(sockfd);
+                        exit(0);
+                    }
+                }
+                else{  //the name was not found
+                    if (send(client_list[0].port_fd, p_invalid_buffer, len_p_invalid_msg, 0) == -1) 
+                    {
+                        perror("send");
+                        close(sockfd);
+                        exit(0);
+                    }
+                }
             }
         
         }
