@@ -256,7 +256,33 @@ int main(int argc, char *argv[])
         printf("Client Authenticated and joined a connection\n");
     }
     else {
-        printf("Client could not be authenicated, please try again\n");
+        struct message msg_nack= {0, 0, "", ""};
+
+        // Converting the buffer to a message struct
+        sscanf(buf, "%u:%u:", &msg_nack.type, &msg_nack.size);
+
+        int name_start_index = 0, name_end_index = 0, num_colon = 0;
+        for (int i = 0; i < num_bytes; i++)
+        {
+            if (buf[i] == ':')
+            {
+                num_colon++;
+                if (num_colon == 2)
+                {
+                    name_start_index = i + 1;
+                }
+                if (num_colon == 3)
+                {
+                    name_end_index = i;
+                }
+            }
+        }
+        memcpy(msg_nack.source, &buf[name_start_index], name_end_index - name_start_index);
+        memcpy(msg_nack.data, &buf[name_end_index + 1], msg_nack.size);
+
+        printf("Could Not Login:\n");
+        printf("%s \n", msg_nack.data);
+
         continue;
     }
 
