@@ -355,8 +355,32 @@ int main(int argc, char *argv[])
                 }
                 buf3[num_bytes] = '\0';
 
-                //here i should recieve a QU_ack message il just print it for now
-                printf("Client : received : %s \n", buf3);
+                struct message msg_query = {0, 0, "", ""};
+
+                // Converting the buffer to a message struct
+                sscanf(buf3, "%u:%u:", &msg_query.type, &msg_query.size);
+
+                int name_start_index = 0, name_end_index = 0, num_colon = 0;
+                for (int i = 0; i < num_bytes; i++)
+                {
+                    if (buf3[i] == ':')
+                    {
+                        num_colon++;
+                        if (num_colon == 2)
+                        {
+                            name_start_index = i + 1;
+                        }
+                        if (num_colon == 3)
+                        {
+                            name_end_index = i;
+                        }
+                    }
+                }
+                memcpy(msg_query.source, &buf3[name_start_index], name_end_index - name_start_index);
+                memcpy(msg_query.data, &buf3[name_end_index + 1], msg_query.size);
+
+                printf("The List :\n");
+                printf("%s", msg_query.data);
 
                 printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
 
@@ -665,7 +689,7 @@ int main(int argc, char *argv[])
 
                 char buf3[MAXDATASIZE];
 
-                if ((num_bytes = recv(sockfd, buf3, MAXDATASIZE - 1, 0)) == 0)
+                if ((num_bytes = recv(sockfd, buf3, 4096, 0)) == 0)
                 {
                     close(sockfd);
                     printf("closing connection\n");
@@ -674,8 +698,33 @@ int main(int argc, char *argv[])
                 }
                 buf3[num_bytes] = '\0';
 
-                // here i should recieve a QU_ack message il just print it for now
-                printf("Client : received : %s \n", buf3);
+                struct message msg_query = {0, 0, "", ""};
+
+                // Converting the buffer to a message struct
+                sscanf(buf3, "%u:%u:", &msg_query.type, &msg_query.size);
+
+                int name_start_index = 0, name_end_index = 0, num_colon = 0;
+                for (int i = 0; i < num_bytes; i++)
+                {
+                    if (buf3[i] == ':')
+                    {
+                        num_colon++;
+                        if (num_colon == 2)
+                        {
+                            name_start_index = i + 1;
+                        }
+                        if (num_colon == 3)
+                        {
+                            name_end_index = i;
+                        }
+                    }
+                }
+                memcpy(msg_query.source, &buf3[name_start_index], name_end_index - name_start_index);
+                memcpy(msg_query.data, &buf3[name_end_index + 1], msg_query.size);
+
+                printf("The List :\n");
+                printf("%s", msg_query.data);
+
 
                 continue;
             }
