@@ -647,6 +647,8 @@ int main(int argc, char *argv[])
 
                 // TODO: add client to session almost like a join session (could implement this part higher to use the join session function)
 
+                //Here the client will be waiting for a JN_ack or JN_nack message (look at the accept code in client for better idea)
+
                 // the packet will have the session name as its data field so you can use that to add it to the session
             }
             if (msg.type == 17) // the priv message is recieved

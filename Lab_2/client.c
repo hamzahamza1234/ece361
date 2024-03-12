@@ -532,7 +532,31 @@ int main(int argc, char *argv[])
                 }
 
                 invited = false; // since we already accept it
-                continue;
+                char buf8[MAXDATASIZE];
+
+                if ((num_bytes = recv(sockfd, buf8, MAXDATASIZE - 1, 0)) == 0)
+                {
+                    close(sockfd);
+                    printf("closing connection\n");
+                    perror("recv fininshed");
+                    continue;
+                }
+                buf8[num_bytes] = '\0';
+
+                // here i should recieve a JN_ack or JN_nack message il just print it for now
+                printf("Client : received : %s \n", buf8);
+
+                if (buf8[0] == '6')
+                { // will implement checking the jn ack and jn nack message here (just 1 for now)
+                    in_session = true;
+                    printf("Session Joined.\n");
+                }
+                else
+                {
+                    printf("join session failed, session doesnt exist. Please Try again.\n");
+                    printf("Enter the message (or enter /logout to logout or /quit to exit the program ): \n");
+                    continue;
+                }
             }
 
             // check if its a decline
