@@ -212,8 +212,6 @@ int main(int argc, char *argv[])
         }
 
         int max_fd = sockfd;
-        //printf("========================\n");
-        //printf("%d\n", sockfd);
 
         FD_ZERO(&read_fds);
 
@@ -225,10 +223,8 @@ int main(int argc, char *argv[])
                 if (client_list[i].port_fd > max_fd) {
                     max_fd = client_list[i].port_fd;
                 }
-                //printf("%d\n", client_list[i].port_fd);
             }
         }
-        //printf("========================\n");
 
         if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
             perror("select error");
@@ -287,9 +283,7 @@ int main(int argc, char *argv[])
             bool found_user = false;
             bool wrong_password = true;
             // Authenticating user
-            printf("MSG: source=%s data=%s\n", msg.source, msg.data);
             for (int i = 0; i < NUM_USERS; i++) {
-                printf("CLIENT: username=%s, password=%s, logged in=%s\n", client_list[i].username, client_list[i].password,  client_list[i].logged_in ? "true" : "false");
                 if (strcmp(msg.source, client_list[i].username) == 0) {
                     found_user = true;
                     if (strcmp(msg.data, client_list[i].password) == 0) {
@@ -302,17 +296,9 @@ int main(int argc, char *argv[])
                         }
                     }
                 }
-                /*if ((strcmp(msg.source, client_list[i].username) == 0) 
-                    && (strcmp(msg.data, client_list[i].password) == 0)
-                    && !(client_list[i].logged_in)) {
-                        valid_login = true;
-                        client_list[i].logged_in = true;
-                        client_list[i].cur_session[0] = '\0';
-                        client_list[i].port_fd = new_fd;
-                }*/
             }
 
-            if (valid_login) { // need to check login message for authentication here (i simply did 1 for now)
+            if (valid_login) { // Check login message for authentication 
                 if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
                 {
                     perror("send");
@@ -335,21 +321,14 @@ int main(int argc, char *argv[])
                     nak_size = 18;
                 }
 
-                if (send_message(new_fd, 3, nak_size, 2, zero, nak_reason) == -1) // TODO: lo_nack needs to include the reason for failure
+                if (send_message(new_fd, 3, nak_size, 2, zero, nak_reason) == -1)
                 {
                     perror("send");
                     close(sockfd);
                     exit(0);
                 }
-                /*if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1) // TODO: lo_nack needs to include the reason for failure
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }*/
                 printf("Client Authenication Failed\n");
                 continue;
-
             }
         } else {
             int cur_fd = -1;
@@ -367,14 +346,8 @@ int main(int argc, char *argv[])
             int num_bytes = 0;
             if ((num_bytes = recv(cur_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
             {
-                // Find client to update info
-                /*for (int i = 0; i < NUM_USERS; i++) {
-                    if (client_list[i].port_fd == cur_fd) {
-                        client_list[i].logged_in = false;
-                    }
-                }*/
                 client_list[client_index].logged_in = false;
-                for (int i = 0; i < NUM_USERS; i++) { // TODO: possibly determine the index of the user's session in the loop that finds client index
+                for (int i = 0; i < NUM_USERS; i++) { 
                     if(session_list[i].active && (strcmp(session_list[i].name, client_list[client_index].cur_session) == 0)) {
                         session_list[i].num_users--;
                         if (session_list[i].num_users == 0) {
@@ -388,7 +361,6 @@ int main(int argc, char *argv[])
                 close(cur_fd);
                 printf("Client has closed connection\n");
                 perror("recv finished");
-                //break;
                 continue;
             }
             buf[num_bytes] = '\0';
@@ -428,18 +400,6 @@ int main(int argc, char *argv[])
                 // Adding sessions to the message
                 for (int i = 0; i < NUM_USERS; i++) {
                     if (session_list[i].active) {
-                        /*if (session_list[i].size + 1 + num_char > 100) { // This is if there is the possibility of overflow
-                            // Reached maximum characters per packet, send packet
-                            if (send_message(cur_fd, 13, num_char, 2, zero, qu_data_buffer) == -1)
-                            {
-                                perror("send");
-                                close(sockfd);
-                                exit(0);
-                            }
-                            // Resetting the buffer and num_char
-                            qu_data_buffer[0] = '\0';
-                            num_char = 0;
-                        }*/
                         strncat(qu_data_buffer, session_list[i].name, session_list[i].size);
                         strncat(qu_data_buffer, "\n", 2);
                         num_char += session_list[i].size + 1;
@@ -468,49 +428,6 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
                 printf("Sent QU_ACK to client.\n");
-
-                // Generating QU_ACK message
-                /*struct message qu_ACK = {0, 0, "", ""};
-
-                qu_ACK.type = 13;
-                qu_ACK.size = msg.size;
-                strncat(qu_ACK.source, zero, 2);
-                strncpy(qu_ACK.data, msg.data, msg.size);
-
-                
-                char qu_ack_buffer[4096] = {'\0'};
-                char number_buffer[4096] = {'\0'};
-
-                sprintf(number_buffer, "%d", qu_ACK.type);
-                strcat(qu_ack_buffer, number_buffer);
-                strcat(qu_ack_buffer, colon_str);
-
-                sprintf(number_buffer, "%d", qu_ACK.size);
-                strcat(qu_ack_buffer, number_buffer);
-                strcat(qu_ack_buffer, colon_str);
-
-                strcat(qu_ack_buffer, qu_ACK.source);
-                strcat(qu_ack_buffer, colon_str);
-
-                strcat(qu_ack_buffer, qu_ACK.data);
-
-                int len_qu_ack_msg = strlen(qu_ack_buffer);
-
-                if (send(cur_fd, qu_ack_buffer, len_qu_ack_msg, 0) == -1)
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }
-                printf("Sent QU_ACK to client.\n");*/
-
-                /*if (send(cur_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }*/
-
                 continue;
             }
 
@@ -699,182 +616,9 @@ int main(int argc, char *argv[])
                         }
                     }
                 }
-
-
                 continue;
             }
         }
-
-        /*if (listen(sockfd, BACKLOG) == -1){
-            perror("listen failed");
-            exit(1);
-        }*/
-
-        /*new_fd = accept(sockfd, (struct sockaddr*) &from_addr, &addr_size);
-
-        if (new_fd == -1){
-            perror("accept failed");
-            continue;
-        }
-
-        if ( *inet_ntop(from_addr.ss_family, (struct sockaddr *)&from_addr, s, sizeof (s)) == -1 ){
-            perror("inet_ntop failed");
-        }
-        printf("server: got connection from %s\n", s);
- 
-        int num_bytes = 0;
-
-        if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0) // this makes sure that if client closes its fd, we stop listening and close ours as well
-        {
-            close(new_fd);
-            printf("closing connection\n");
-            perror("recv fininshed");
-            continue;
-        }
-        buf[num_bytes] = '\0';
-        printf("SERVER : received : %s \n", buf);
-
-        bool valid_login = false;
-        struct message msg;
-
-        // Converting the buffer to a message struct
-        sscanf(buf, "%u:%u:", &msg.type, &msg.size);
-            
-        int name_start_index = 0, name_end_index = 0, num_colon = 0;
-        for (int i = 0; i < num_bytes; i++) {
-            if (buf[i] == ':') {
-                num_colon++;
-                if (num_colon == 2) {
-                    name_start_index = i + 1;
-                }
-                if (num_colon == 3) {
-                    name_end_index = i;
-                }
-            }
-        }
-        memcpy(msg.source, &buf[name_start_index], name_end_index - name_start_index);
-        memcpy(msg.data, &buf[name_end_index + 1], msg.size);
-
-        /*printf("MESSAGE\n");
-        printf("type:%u size:%u name:%s data: %s\n", msg.type, msg.size, msg.source, msg.data);*/
-
-        // Authenticating user
-        /*for (int i = 0; i < NUM_USERS; i++) {
-            if ((strcmp(msg.source, client_list[i].username) == 0) 
-                && (strcmp(msg.data, client_list[i].password) == 0)
-                && !(client_list[i].logged_in)) {
-                    valid_login = true;
-                    client_list[i].logged_in = true;
-                    client_list[i].cur_session[0] = '\0';
-                    client_list[i].port_fd = new_fd;
-            }
-        }
-
-        if (valid_login){ // need to check login message for authentication here (i simply did 1 for now)
-            if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
-            {
-                perror("send");
-                close(sockfd);
-                exit(0);
-            }
-
-            printf("Client has been authenicated and joined connection\n");
-        } else {  //if authentication failed send a lo_nack message and continue searching for clients
-            if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1) // TODO: lo_nack needs to include the reason for failure
-            {
-                perror("send");
-                close(sockfd);
-                exit(0);
-            }
-            printf("Client Authenication Failed\n");
-            continue;
-
-        }*/
-
-        // this loop makes sure we keep listening to our client until it closes and echoing the message back
-        // I have added this echo to make sure my client is able to both read from server and stdin at the same time
-
-        /*while(num_bytes != 0){  
-            num_bytes = 0;
-            if ((num_bytes = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == 0 )
-            {
-                // Find client to update info
-                for (int i = 0; i < NUM_USERS; i++) {
-                    if (client_list[i].port_fd == new_fd) {
-                        client_list[i].logged_in = false;
-                    }
-                }
-                close(new_fd);
-                printf("Client has closed connection\n");
-                perror("recv finished");
-                break;
-            }
-            buf[num_bytes] = '\0';
-            printf("SERVER : received : %s \n", buf);
-
-
-
-            if (buf[0] == '1' && buf[1] == '2') { // this means it is a query message
-
-                printf("Recieved Query  request from client. \n");
-                printf("Sending QU_ACK back to client. \n");
-
-                if (send(new_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }
-
-                continue;
-            }
-
-            if (buf[0] == '5')
-            { // this means it is a join session message
-
-               printf("Recieved the join request from client. \n");
-               printf("Sending JN_ack or JN_nack back to client. \n");
-
-                if (send(new_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session joining
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }
-
-                continue;
-            }
-
-            if (buf[0] == '9')
-            { // this means it is a create session message
-
-                printf("Recieved the create request from client. \n");
-                printf("Sending NS_ack back to client. \n");
-
-                //not much checking to do here because my client code can only send one create session message and only if it isnt already in one
-
-                if (send(new_fd, buf, num_bytes, 0) == -1) // for now we will just send the message back but we have to implement session creation
-                {
-                    perror("send");
-                    close(sockfd);
-                    exit(0);
-                }
-
-                continue;
-            }
-
-            if (buf[0] == '8')
-            { // this means it is a leave session message
-
-                printf("Recieved the leave request from client. \n");
-
-                //add whatever needed to make sure client isnt in session
-
-                continue;
-            }
-        }*/
-
-
         
     }
 
