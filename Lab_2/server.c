@@ -15,7 +15,7 @@
 #include <cassert>
 
 #define BACKLOG 20
-#define MAXDATASIZE 100
+#define MAXDATASIZE 4096
 #define MAX_NAME 100
 #define MAX_PSWRD 100
 #define MAX_SESSION 100
@@ -71,6 +71,43 @@ Session session_list[NUM_USERS] = {
     {"", 0, false, 0},
 };
 
+char colon_str[2] = ":";
+
+/*
+ *  send_message() - converts type, data_size, source, and data into a struct msg then converts the struct into a buffer and sends to fd
+ *      - Returns the result of send
+ */
+int send_message(int fd, unsigned int type, unsigned int data_size, int src_size, char *source, char *data) {
+    // Generating message
+    struct message msg = {0, 0, "", ""};
+
+    msg.type = type;
+    msg.size = data_size;
+    strncat(msg.source, source, src_size);
+    strncpy(msg.data, data, data_size);
+
+    
+    char msg_buffer[4096] = {'\0'};
+    char number_buffer[4096] = {'\0'};
+
+    sprintf(number_buffer, "%d", msg.type);
+    strcat(msg_buffer, number_buffer);
+    strcat(msg_buffer, colon_str);
+
+    sprintf(number_buffer, "%d", msg.size);
+    strcat(msg_buffer, number_buffer);
+    strcat(msg_buffer, colon_str);
+
+    strcat(msg_buffer, msg.source);
+    strcat(msg_buffer, colon_str);
+
+    strcat(msg_buffer, msg.data);
+
+    int len_msg = strlen(msg_buffer);
+
+    return send(fd, msg_buffer, len_msg, 0);
+}
+
 int main(int argc, char *argv[])
 {
     struct addrinfo hints, *res;
@@ -97,7 +134,7 @@ int main(int argc, char *argv[])
 
     char lo_ack_buffer[4096] = {'\0'};
     char num_buffer[4096] = {'\0'};
-    char colon_str[2] = ":";
+    //char colon_str[2] = ":";
 
     sprintf(num_buffer, "%d", lo_ack.type);
     strcat(lo_ack_buffer, num_buffer);
@@ -346,27 +383,101 @@ int main(int argc, char *argv[])
             memcpy(msg.data, &buf[name_end_index + 1], msg.size);
 
             if (msg.type == 12) { // this means it is a query message
+                int num_char = 0;
+                char qu_data_buffer[MAXDATASIZE] = {'\0'};
 
-                for (int i = 0; i < NUM_USERS; i++) {
-                    if (session_list[i].active) {
-                        printf("%s\n", session_list[i].name);
-                    }
-                }
-                for (int i = 0; i < NUM_USERS; i++) {
-                    if (client_list[i].logged_in) {
-                        printf("%s\n", client_list[i].username);
-                    }
-                }
+                // Adding the session header
+                strncpy(qu_data_buffer, "SESSIONS\n", 9);
+                num_char = 9;
 
                 printf("Recieved Query  request from client. \n");
                 printf("Sending QU_ACK back to client. \n");
 
-                if (send(cur_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
+                // Adding sessions to the message
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (session_list[i].active) {
+                        /*if (session_list[i].size + 1 + num_char > 100) { // This is if there is the possibility of overflow
+                            // Reached maximum characters per packet, send packet
+                            if (send_message(cur_fd, 13, num_char, 2, zero, qu_data_buffer) == -1)
+                            {
+                                perror("send");
+                                close(sockfd);
+                                exit(0);
+                            }
+                            // Resetting the buffer and num_char
+                            qu_data_buffer[0] = '\0';
+                            num_char = 0;
+                        }*/
+                        strncat(qu_data_buffer, session_list[i].name, session_list[i].size);
+                        strncat(qu_data_buffer, "\n", 2); // TODO: this might need to be a 2
+                        num_char += session_list[i].size + 1;
+                        printf("%s\n", session_list[i].name);
+                    }
+                }
+                // Adding the user header
+                strncat(qu_data_buffer, "\nUSERS\n", 8);
+                num_char += 7;
+
+
+                // Adding the users to the message
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if (client_list[i].logged_in) {
+                        strncat(qu_data_buffer, client_list[i].username, strlen(client_list[i].username));
+                        strncat(qu_data_buffer, "\n", 2); // TODO: this might need to be a 2
+                        num_char += strlen(client_list[i].username) + 1;
+                        printf("%s\n", client_list[i].username);
+                    }
+                }
+
+                if (send_message(cur_fd, 13, num_char, 2, zero, qu_data_buffer) == -1)
                 {
                     perror("send");
                     close(sockfd);
                     exit(0);
                 }
+                printf("Sent QU_ACK to client.\n");
+
+                // Generating QU_ACK message
+                /*struct message qu_ACK = {0, 0, "", ""};
+
+                qu_ACK.type = 13;
+                qu_ACK.size = msg.size;
+                strncat(qu_ACK.source, zero, 2);
+                strncpy(qu_ACK.data, msg.data, msg.size);
+
+                
+                char qu_ack_buffer[4096] = {'\0'};
+                char number_buffer[4096] = {'\0'};
+
+                sprintf(number_buffer, "%d", qu_ACK.type);
+                strcat(qu_ack_buffer, number_buffer);
+                strcat(qu_ack_buffer, colon_str);
+
+                sprintf(number_buffer, "%d", qu_ACK.size);
+                strcat(qu_ack_buffer, number_buffer);
+                strcat(qu_ack_buffer, colon_str);
+
+                strcat(qu_ack_buffer, qu_ACK.source);
+                strcat(qu_ack_buffer, colon_str);
+
+                strcat(qu_ack_buffer, qu_ACK.data);
+
+                int len_qu_ack_msg = strlen(qu_ack_buffer);
+
+                if (send(cur_fd, qu_ack_buffer, len_qu_ack_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+                printf("Sent QU_ACK to client.\n");*/
+
+                /*if (send(cur_fd, buf, num_bytes, 0) == -1)  //for now we will just send the message back but we have to implement sending users and sessions
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }*/
 
                 continue;
             }
