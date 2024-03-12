@@ -649,8 +649,15 @@ int main(int argc, char *argv[])
 
                 // the packet will have the session name as its data field so you can use that to add it to the session
             }
-        }
+            if (msg.type == 17) // the priv message is recieved
+            {
+                printf("The client %s wants to send a private message \n", msg.source);
+
+                // TODO: Send message to the client (both client name and data are in data field)
+                // do not send any ack back
+            }
         
+        }
     }
 
 

@@ -378,7 +378,7 @@ int main(int argc, char *argv[])
             if (msg_chat_1.type == 14)
             { // invited recieved
                 printf("Invite recieved from %s to join %s.\n", msg_chat_1.source, msg_chat_1.data);
-                printf("Either type /accept with session name or /decline with session name\n");
+                printf("Either type /accept with session name or /decline to decline\n");
                 invited = true;
                 continue;
             }
@@ -477,12 +477,9 @@ int main(int argc, char *argv[])
 
             // check for accept or decline
             // check if its an invite
-            char accept_msg_check[100] = "/accept ";
-            char accept_command[MAXDATASIZE];
+            char accept_msg_check[100] = "/accept";
 
-            strncpy(accept_command, str, 9);
-
-            if (strcmp(accept_command, accept_msg_check) == 0)
+            if (strncmp(str, accept_msg_check,7) == 0)
             { // this means its an accept
 
                 // lets make the accept message and send it
@@ -502,7 +499,7 @@ int main(int argc, char *argv[])
 
                 if (accept_msg.size == 0)
                 {
-                    printf("Please Enter /accept ith the name of session to accept invite.\n");
+                    printf("Please Enter /accept with the name of session to accept invite.\n");
                     continue;
                 }
 
@@ -539,12 +536,10 @@ int main(int argc, char *argv[])
             }
 
             // check if its a decline
-            char decline_msg_check[100] = "/decline ";
-            char decline_command[MAXDATASIZE];
+            char decline_msg_check[100] = "/decline";
 
-            strncpy(decline_command, str, 10);
 
-            if (strcmp(decline_command, decline_msg_check) == 0)
+            if (strcmp(str, decline_msg_check) == 0)
             { // this means its a decline
 
                 // lets make the decline message and send it
@@ -591,6 +586,82 @@ int main(int argc, char *argv[])
                 }
 
                 invited = false; // since we already declined it
+                continue;
+            }
+
+            //lets add priv function
+
+            char priv_msg_check[100] = "/priv";
+
+            if (strncmp(str, priv_msg_check, 5) == 0)
+            { // this means its a priv message
+
+                // lets make the priv message and send it
+
+                struct message priv_msg = {0, 0, "", ""};
+
+                priv_msg.type = 17;
+                strcat(priv_msg.source, client_name);
+                strncat(priv_msg.data, str + 6, 100);
+                priv_msg.size = strlen(priv_msg.data);
+
+                if (priv_msg.size == 0)
+                {
+                    printf("please enter the name and message to send with /priv\n");
+                    continue;
+                }
+
+                char delim[] = " "; // used to seperate the login command to all the different arguments
+                int num_args = 0;
+                char priv_com[MAXDATASIZE];
+                strncpy(priv_com, str + 6, MAXDATASIZE);
+
+                char *priv_ptr = strtok(priv_com, delim);
+                char send_name[100];
+                while (priv_ptr != NULL)
+                { // this saves each argument in its respective place
+                    if (num_args == 0)
+                    {
+                        strncpy(send_name, priv_ptr, 100);
+                    }
+
+                    num_args++;
+                    priv_ptr = strtok(NULL, delim);
+                }
+
+                if (num_args < 2)
+                { // error checking for too many arguments
+                    printf("Wrong number of Arguments\n");
+                    continue;
+                }
+
+                printf("Sending Private message to %s.\n",send_name);
+
+                char priv_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", priv_msg.type);
+                strcat(priv_buffer, num_buffer);
+                strcat(priv_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", priv_msg.size);
+                strcat(priv_buffer, num_buffer);
+                strcat(priv_buffer, colon_str);
+
+                strcat(priv_buffer, priv_msg.source);
+                strcat(priv_buffer, colon_str);
+
+                strcat(priv_buffer, priv_msg.data);
+
+                int len_priv_msg = strlen(priv_buffer);
+
+                printf("Sending to server: %s\n", priv_buffer);
+
+                if (send(sockfd, priv_buffer, len_priv_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
                 continue;
             }
 
@@ -941,6 +1012,81 @@ int main(int argc, char *argv[])
                 printf("%s", msg_query.data);
 
 
+                continue;
+            }
+            // lets add priv function
+
+            char priv_msg_check[100] = "/priv";
+
+            if (strncmp(str, priv_msg_check, 5) == 0)
+            { // this means its a priv message
+
+                // lets make the priv message and send it
+
+                struct message priv_msg = {0, 0, "", ""};
+
+                priv_msg.type = 17;
+                strcat(priv_msg.source, client_name);
+                strncat(priv_msg.data, str + 6, 100);
+                priv_msg.size = strlen(priv_msg.data);
+
+                if (priv_msg.size == 0)
+                {
+                    printf("please enter the name and message to send with /priv\n");
+                    continue;
+                }
+
+                char delim[] = " "; // used to seperate the login command to all the different arguments
+                int num_args = 0;
+                char priv_com[MAXDATASIZE];
+                strncpy(priv_com, str + 6, MAXDATASIZE);
+
+                char *priv_ptr = strtok(priv_com, delim);
+                char send_name[100];
+                while (priv_ptr != NULL)
+                { // this saves each argument in its respective place
+                    if (num_args == 0)
+                    {
+                        strncpy(send_name, priv_ptr, 100);
+                    }
+
+                    num_args++;
+                    priv_ptr = strtok(NULL, delim);
+                }
+
+                if (num_args < 2)
+                { // error checking for too many arguments
+                    printf("Wrong number of Arguments\n");
+                    continue;
+                }
+
+                printf("Sending Private message to %s.\n", send_name);
+
+                char priv_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", priv_msg.type);
+                strcat(priv_buffer, num_buffer);
+                strcat(priv_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", priv_msg.size);
+                strcat(priv_buffer, num_buffer);
+                strcat(priv_buffer, colon_str);
+
+                strcat(priv_buffer, priv_msg.source);
+                strcat(priv_buffer, colon_str);
+
+                strcat(priv_buffer, priv_msg.data);
+
+                int len_priv_msg = strlen(priv_buffer);
+
+                printf("Sending to server: %s\n", priv_buffer);
+
+                if (send(sockfd, priv_buffer, len_priv_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
                 continue;
             }
 
