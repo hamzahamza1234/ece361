@@ -12,3 +12,7 @@ all 4 implemented in client and skeleton in server
 
 the priv message only works with user hamza for now due to line 721 in server, caitlin needs to implement that 
 
+the p_valid and p_invalid are two acks i decided to add because we want to notify the private message sender if 
+the user they entered exists, if the user they enetered doesnt exists, the message will not be sent and so we can notify them with the p_invalid acks
+. I already implemented this in the client asw and wrong a basic skeleton in the server. 
+
