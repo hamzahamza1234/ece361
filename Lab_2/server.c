@@ -85,6 +85,7 @@ int send_message(int fd, unsigned int type, unsigned int data_size, int src_size
     msg.size = data_size;
     strncat(msg.source, source, src_size);
     strncpy(msg.data, data, data_size);
+    
 
     
     char msg_buffer[4096] = {'\0'};
@@ -617,6 +618,36 @@ int main(int argc, char *argv[])
                     }
                 }
                 continue;
+            }
+
+            if (msg.type == 14){
+                printf("Invite recieved and sending to %s.\n", msg.data);
+
+                //TODO: send invite to the client 
+
+                //in the packet please make sure to have only the session name in the data , leave the source name the same
+
+                //only send the invite if the reciever is not in a session and if logged in
+
+                //take a look at client's handling of sending and recieving an invite to get a good idea
+
+
+            }
+            if (msg.type == 15) //the client accepted the invited
+            {
+                printf("The client %s accepted the invite to join %s.\n", msg.source,msg.data);
+
+                // TODO: add client to session almost like a join session (could implement this part higher to use the join session function)
+
+                //the packet will have the session name as its data field so you can use that to add it to the session
+            }
+            if (msg.type == 16) // the client accepted the invited
+            {
+                printf("The client declined the invite\n");
+
+                // TODO: add client to session almost like a join session (could implement this part higher to use the join session function)
+
+                // the packet will have the session name as its data field so you can use that to add it to the session
             }
         }
         

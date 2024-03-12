@@ -21,6 +21,7 @@
 bool quit = false;
 bool in_session = false;
 bool logout = false;
+bool invited = false;
 
 struct message
 {
@@ -325,12 +326,71 @@ int main(int argc, char *argv[])
             break;
         }
 
-  
+        FD_ZERO(&read_fds);
+
+        FD_SET(STDIN, &read_fds);  // add stdin
+        FD_SET(sockfd, &read_fds); // add the socket file descriptor
 
 
-        char str[MAXDATASIZE];
+        if (select(sockfd + 1, &read_fds, NULL, NULL, NULL) < 0)
+        {
+            perror("select error");
+            exit(1);
+        }
 
-         fgets(str, 4096, stdin);
+        if (FD_ISSET(sockfd, &read_fds))
+        {
+            char buf7[MAXDATASIZE];
+
+            if ((num_bytes = recv(sockfd, buf7, MAXDATASIZE - 1, 0)) == 0)
+            {
+                close(sockfd);
+                printf("closing connection\n");
+                perror("recv fininshed");
+                continue;
+            }
+            buf7[num_bytes] = '\0';
+
+            struct message msg_chat_1 = {0, 0, "", ""};
+
+            // Converting the buffer to a message struct
+            sscanf(buf7, "%u:%u:", &msg_chat_1.type, &msg_chat_1.size);
+
+            int name_start_index = 0, name_end_index = 0, num_colon = 0;
+            for (int i = 0; i < num_bytes; i++)
+            {
+                if (buf7[i] == ':')
+                {
+                    num_colon++;
+                    if (num_colon == 2)
+                    {
+                        name_start_index = i + 1;
+                    }
+                    if (num_colon == 3)
+                    {
+                        name_end_index = i;
+                    }
+                }
+            }
+            memcpy(msg_chat_1.source, &buf7[name_start_index], name_end_index - name_start_index);
+            memcpy(msg_chat_1.data, &buf7[name_end_index + 1], msg_chat_1.size);
+
+            if (msg_chat_1.type == 14)
+            { // invited recieved
+                printf("Invite recieved from %s to join %s.\n", msg_chat_1.source, msg_chat_1.data);
+                printf("Either type /accept with session name or /decline with session name\n");
+                invited = true;
+                continue;
+            }
+
+            continue;
+        }
+
+        if (FD_ISSET(STDIN, &read_fds)){
+
+            char str[MAXDATASIZE];
+
+            fgets(str, 4096, stdin);
             int len = strlen(str);
         if (len  == 1){
             printf("Empty space is not allowed. \n");
@@ -358,6 +418,8 @@ int main(int argc, char *argv[])
                 quit = true;
                 break;
             }
+
+
 
             if (strcmp(str, "/list") == 0)
             { // Ask for list from server
@@ -413,8 +475,126 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            // check for accept or decline
+            // check if its an invite
+            char accept_msg_check[100] = "/accept ";
+            char accept_command[MAXDATASIZE];
 
-        //lets check if they want to do sessional commands
+            strncpy(accept_command, str, 9);
+
+            if (strcmp(accept_command, accept_msg_check) == 0)
+            { // this means its an accept
+
+                // lets make the accept message and send it
+
+                if (!invited)
+                {
+                    printf("You Havent been invited anywhere.\n");
+                    continue;
+                }
+
+                struct message accept_msg = {0, 0, "", ""};
+
+                accept_msg.type = 15;
+                strcat(accept_msg.source, client_name);
+                strncat(accept_msg.data, str + 8, 100);
+                accept_msg.size = strlen(accept_msg.data);
+
+                if (accept_msg.size == 0)
+                {
+                    printf("Please Enter /accept ith the name of session to accept invite.\n");
+                    continue;
+                }
+
+                printf("Accepted the invite to join %s. \n", accept_msg.data);
+
+                char accept_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", accept_msg.type);
+                strcat(accept_buffer, num_buffer);
+                strcat(accept_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", accept_msg.size);
+                strcat(accept_buffer, num_buffer);
+                strcat(accept_buffer, colon_str);
+
+                strcat(accept_buffer, accept_msg.source);
+                strcat(accept_buffer, colon_str);
+
+                strcat(accept_buffer, accept_msg.data);
+
+                int len_accept_msg = strlen(accept_buffer);
+
+                printf("Sending to server: %s\n", accept_buffer);
+
+                if (send(sockfd, accept_buffer, len_accept_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                invited = false; // since we already accept it
+                continue;
+            }
+
+            // check if its a decline
+            char decline_msg_check[100] = "/decline ";
+            char decline_command[MAXDATASIZE];
+
+            strncpy(decline_command, str, 10);
+
+            if (strcmp(decline_command, decline_msg_check) == 0)
+            { // this means its a decline
+
+                // lets make the decline message and send it
+
+                if (!invited)
+                {
+                    printf("You Havent been invited anywhere.\n");
+                    continue;
+                }
+
+                struct message decline_msg = {0, 0, "", ""};
+
+                decline_msg.type = 16;
+                decline_msg.size = 0;
+                strcat(decline_msg.source, client_name);
+                strncat(decline_msg.data, zero, 2);
+
+                printf("Declined the invitation.\n");
+
+                char decline_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", decline_msg.type);
+                strcat(decline_buffer, num_buffer);
+                strcat(decline_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", decline_msg.size);
+                strcat(decline_buffer, num_buffer);
+                strcat(decline_buffer, colon_str);
+
+                strcat(decline_buffer, decline_msg.source);
+                strcat(decline_buffer, colon_str);
+
+                strcat(decline_buffer, decline_msg.data);
+
+                int len_decline_msg = strlen(decline_buffer);
+
+                printf("Sending to server: %s\n", decline_buffer);
+
+                if (send(sockfd, decline_buffer, len_decline_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+
+                invited = false; // since we already declined it
+                continue;
+            }
+
+            // lets check if they want to do sessional commands
 
             char sess_command[MAXDATASIZE];
 
@@ -565,6 +745,7 @@ int main(int argc, char *argv[])
 
                 continue;
         }
+    }
 
         
         // This will be last and final loop in which we will be in a session sending messages from stdin and recieving messages from server
@@ -620,13 +801,18 @@ int main(int argc, char *argv[])
             memcpy(msg_chat.source, &buf2[name_start_index], name_end_index - name_start_index);
             memcpy(msg_chat.data, &buf2[name_end_index + 1], msg_chat.size);
 
+            if (msg_chat.type == 14)
+            { // invited recieved while in session 
+               printf("cant recieve invites while in session.\n");
+               continue;
+            }
 
             printf("Client Recieved a message from %s: %s \n",msg_chat.source, msg_chat.data);
         }
 
         if (FD_ISSET(STDIN, &read_fds))
         {
-
+            char str[MAXDATASIZE];
             fgets(str, MAXDATASIZE, stdin);
             
             int len = strlen(str);
@@ -643,6 +829,7 @@ int main(int argc, char *argv[])
             str[strcspn(str, "\n")] = 0; // to remove the new line character
 
             char exit_msg[100] = "/logout";
+            
 
             if (strcmp(str, exit_msg) == 0)
             {
@@ -657,6 +844,8 @@ int main(int argc, char *argv[])
                 quit = true;
                 break;
             }
+
+            char sess_command[MAXDATASIZE];
 
             strncpy(sess_command, str, 14);
             if (strcmp(sess_command, "/leavesession") == 0)
@@ -754,6 +943,58 @@ int main(int argc, char *argv[])
 
                 continue;
             }
+
+            //check if its an invite
+            char inv_msg_check[100] = "/invite";
+            char inv_command[MAXDATASIZE];
+
+
+            if (strncmp(str, inv_msg_check,7) == 0){// this means its an invite
+
+                // lets make the join message and send it
+
+                struct message inv_msg = {0, 0, "", ""};
+
+                inv_msg.type = 14;
+                strcat(inv_msg.source, client_name);
+                strncat(inv_msg.data, str + 8, 100);
+                inv_msg.size = strlen(inv_msg.data);
+
+                if (inv_msg.size == 0){
+                    printf("Please Enter name of client to invite.\n");
+                    continue;
+                }
+
+                printf("Invited %s to join session. \n", inv_msg.data);
+
+                char inv_buffer[4096] = {'\0'};
+
+                sprintf(num_buffer, "%d", inv_msg.type);
+                strcat(inv_buffer, num_buffer);
+                strcat(inv_buffer, colon_str);
+
+                sprintf(num_buffer, "%d", inv_msg.size);
+                strcat(inv_buffer, num_buffer);
+                strcat(inv_buffer, colon_str);
+
+                strcat(inv_buffer, inv_msg.source);
+                strcat(inv_buffer, colon_str);
+
+                strcat(inv_buffer, inv_msg.data);
+
+                int len_inv_msg = strlen(inv_buffer);
+
+                printf("Sending to server: %s\n", inv_buffer);
+
+                if (send(sockfd, inv_buffer, len_inv_msg, 0) == -1)
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }
+                continue;
+            }
+
 
             //struct
 
