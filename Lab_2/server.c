@@ -284,22 +284,35 @@ int main(int argc, char *argv[])
 
             assert (msg.type == 1); // TODO: remove this assert once confident that the only messages recieved here are of type 1
 
+            bool found_user = false;
+            bool wrong_password = true;
             // Authenticating user
             printf("MSG: source=%s data=%s\n", msg.source, msg.data);
             for (int i = 0; i < NUM_USERS; i++) {
                 printf("CLIENT: username=%s, password=%s, logged in=%s\n", client_list[i].username, client_list[i].password,  client_list[i].logged_in ? "true" : "false");
-
-                if ((strcmp(msg.source, client_list[i].username) == 0) 
+                if (strcmp(msg.source, client_list[i].username) == 0) {
+                    found_user = true;
+                    if (strcmp(msg.data, client_list[i].password) == 0) {
+                        wrong_password = false;
+                        if (!(client_list[i].logged_in)) {
+                            valid_login = true;
+                            client_list[i].logged_in = true;
+                            client_list[i].cur_session[0] = '\0';
+                            client_list[i].port_fd = new_fd;
+                        }
+                    }
+                }
+                /*if ((strcmp(msg.source, client_list[i].username) == 0) 
                     && (strcmp(msg.data, client_list[i].password) == 0)
                     && !(client_list[i].logged_in)) {
                         valid_login = true;
                         client_list[i].logged_in = true;
                         client_list[i].cur_session[0] = '\0';
                         client_list[i].port_fd = new_fd;
-                }
+                }*/
             }
 
-            if (valid_login){ // need to check login message for authentication here (i simply did 1 for now)
+            if (valid_login) { // need to check login message for authentication here (i simply did 1 for now)
                 if (send(new_fd, lo_ack_buffer, len_lo_ack_msg, 0) == -1)
                 {
                     perror("send");
@@ -309,12 +322,31 @@ int main(int argc, char *argv[])
 
                 printf("Client has been authenicated and joined connection\n");
             } else {  //if authentication failed send a lo_nack message and continue searching for clients
-                if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1) // TODO: lo_nack needs to include the reason for failure
+                char nak_reason[100] = {'\0'};
+                int nak_size = 0;
+                if(!found_user) {
+                    strncpy(nak_reason, "User doesn't exist.", 19);
+                    nak_size = 19;
+                } else if (wrong_password) {
+                    strncpy(nak_reason, "Wrong password.", 15);
+                    nak_size = 15;
+                } else {
+                    strncpy(nak_reason, "Already logged in.", 18);
+                    nak_size = 18;
+                }
+
+                if (send_message(new_fd, 3, nak_size, 2, zero, nak_reason) == -1) // TODO: lo_nack needs to include the reason for failure
                 {
                     perror("send");
                     close(sockfd);
                     exit(0);
                 }
+                /*if (send(new_fd, lo_nack_buffer, len_lo_nack_msg, 0) == -1) // TODO: lo_nack needs to include the reason for failure
+                {
+                    perror("send");
+                    close(sockfd);
+                    exit(0);
+                }*/
                 printf("Client Authenication Failed\n");
                 continue;
 
@@ -409,7 +441,7 @@ int main(int argc, char *argv[])
                             num_char = 0;
                         }*/
                         strncat(qu_data_buffer, session_list[i].name, session_list[i].size);
-                        strncat(qu_data_buffer, "\n", 2); // TODO: this might need to be a 2
+                        strncat(qu_data_buffer, "\n", 2);
                         num_char += session_list[i].size + 1;
                         printf("%s\n", session_list[i].name);
                     }
@@ -423,7 +455,7 @@ int main(int argc, char *argv[])
                 for (int i = 0; i < NUM_USERS; i++) {
                     if (client_list[i].logged_in) {
                         strncat(qu_data_buffer, client_list[i].username, strlen(client_list[i].username));
-                        strncat(qu_data_buffer, "\n", 2); // TODO: this might need to be a 2
+                        strncat(qu_data_buffer, "\n", 2);
                         num_char += strlen(client_list[i].username) + 1;
                         printf("%s\n", client_list[i].username);
                     }
