@@ -401,7 +401,7 @@ int main(int argc, char *argv[])
             if (FD_ISSET(STDIN, &read_fds))
             {
 
-                char str[MAXDATASIZE];
+                char str[MAXDATASIZE] = {'\0'};
 
                 fgets(str, 4096, stdin);
                 int len = strlen(str);
@@ -726,7 +726,7 @@ int main(int argc, char *argv[])
 
                 // lets check if they want to do sessional commands
 
-                char sess_command[MAXDATASIZE];
+                char sess_command[MAXDATASIZE] = {'\0'};
 
                 strncpy(sess_command, str, 13);
                 if (strcmp(sess_command, join_ses_msg) == 0)
@@ -796,7 +796,7 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-                    char sess_command2[MAXDATASIZE];
+                    char sess_command2[MAXDATASIZE] = {'\0'};
                     strncpy(sess_command2, str, 14);
                     if (strcmp(sess_command, "/leavesession") == 0)
                     {
