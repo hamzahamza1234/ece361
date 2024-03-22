@@ -671,36 +671,39 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (msg.type == 14){
+            if (msg.type == 14){ // client is inviting another user to a session
                 printf("Invite recieved and sending to %s.\n", msg.data);
+                // Only send the invite if the reciever is not in a session and if logged in
 
-                //TODO: send invite to the client 
-
-                //in the packet please make sure to have only the session name in the data , leave the source name the same
-
-                //only send the invite if the reciever is not in a session and if logged in
-
-                //take a look at client's handling of sending and recieving an invite to get a good idea
-
-
+                // Finding the invitee
+                bool found = false; // TODO: tell user why invite failed?
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if(client_list[i].logged_in && (strcmp(client_list[i].username, msg.data) == 0)) {
+                        found = true;
+                        // Checking if the invitee is not in a session
+                        if (client_list[i].cur_session[0] == '\0') {
+                            //The packet has the server in the data and the inviting client as the source
+                            send_message(client_list[i].port_fd, 14, strlen(client_list[client_index].cur_session), strlen(msg.source), msg.source, client_list[client_index].cur_session);
+                            printf("Sending invite\n");
+                        }
+                    }
+                }
             }
-            if (msg.type == 15) //the client accepted the invited
+            if (msg.type == 15) //the client accepted the invite
             {
                 printf("The client %s accepted the invite to join %s.\n", msg.source,msg.data);
 
                 // TODO: add client to session almost like a join session (could implement this part higher to use the join session function)
 
+                //Here the client will be waiting for a JN_ack or JN_nack message (look at the accept code in client for better idea)
+
                 //the packet will have the session name as its data field so you can use that to add it to the session
             }
-            if (msg.type == 16) // the client accepted the invited
+            if (msg.type == 16) // the client declined the invite
             {
                 printf("The client declined the invite\n");
 
-                // TODO: add client to session almost like a join session (could implement this part higher to use the join session function)
-
-                //Here the client will be waiting for a JN_ack or JN_nack message (look at the accept code in client for better idea)
-
-                // the packet will have the session name as its data field so you can use that to add it to the session
+                // TODO: should the client who invited them recieve an update on the rejection?
             }
             if (msg.type == 17) // the priv message is recieved
             {
