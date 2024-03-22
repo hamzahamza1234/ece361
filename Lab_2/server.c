@@ -109,6 +109,8 @@ int send_message(int fd, unsigned int type, unsigned int data_size, int src_size
 
     int len_msg = strlen(msg_buffer);
 
+    //printf("Sending message: %s\n", msg_buffer);
+
     return send(fd, msg_buffer, len_msg, 0);
 }
 
@@ -805,8 +807,28 @@ int main(int argc, char *argv[])
                 // TODO: Send message to the client (both client name and data are in data field)
                 // if the name exists. send priv_valid_ack, if doesnt exist, send priv_invalid_ack
 
-                if(1) { //1 for now but need to implement checking of if name exists
-                    if (send(client_list[0].port_fd, p_valid_buffer, len_p_valid_msg, 0) == -1) // just client_list[0] for now, need to make it i when you use the for loop
+                char client_name[100] = {'\0'};
+                int name_len = -1;
+
+                // Separating the client name from the data
+                sscanf(msg.data, "%s ", &client_name);
+                name_len = strlen(client_name);
+
+                bool found_client = false;
+
+                // Finding the client the message is being sent to
+                for (int i = 0; i < NUM_USERS; i++) {
+                    if(client_list[i].logged_in && (strcmp(client_list[i].username, client_name) == 0)) {
+                        found_client = true;
+                        //Sending private message
+                        send_message(client_list[i].port_fd, 17, msg.size - (name_len + 1), strlen(msg.source), msg.source, &msg.data[name_len + 1]);
+                        //send_message(client_list[i].port_fd, 11, msg.size - (name_len + 1), strlen(msg.source), msg.source, &msg.data[name_len + 1]);
+                        printf("Sending private message\n");
+                    }
+                }
+
+                if(found_client) {
+                    if (send(cur_fd, p_valid_buffer, len_p_valid_msg, 0) == -1) // Sending p_valid
                     {
                         perror("send");
                         close(sockfd);
@@ -814,7 +836,7 @@ int main(int argc, char *argv[])
                     }
                 }
                 else{  //the name was not found
-                    if (send(client_list[0].port_fd, p_invalid_buffer, len_p_invalid_msg, 0) == -1) 
+                    if (send(cur_fd, p_invalid_buffer, len_p_invalid_msg, 0) == -1) // Sending p_invalid
                     {
                         perror("send");
                         close(sockfd);
