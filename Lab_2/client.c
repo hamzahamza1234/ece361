@@ -389,6 +389,12 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
+                if (msg_chat_1.type == 17)
+                { // invited recieved
+                    printf("Client Recieved a private message from %s: %s \n", msg_chat_1.source, msg_chat_1.data);
+                    continue;
+                }
+
                 continue;
             }
 
@@ -934,6 +940,13 @@ int main(int argc, char *argv[])
                     if (msg_chat.type == 14)
                     { // invited recieved while in session
                         printf("cant recieve invites while in session.\n");
+                        continue;
+                    }
+                    
+                    // Private message
+                    if (msg_chat.type == 17)
+                    {
+                        printf("Client Recieved a private message from %s: %s \n", msg_chat.source, msg_chat.data);
                         continue;
                     }
 
