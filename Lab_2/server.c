@@ -498,6 +498,7 @@ int main(int argc, char *argv[])
                     if (session_list[i].active && (session_list[i].size == msg.size) && (strncmp(session_list[i].name, msg.data, msg.size) == 0)) {
                         session_list[i].num_users++;
                         strncpy(client_list[client_index].cur_session, msg.data, msg.size);
+                        client_list[client_index].cur_session[msg.size] = '\0';
                         joined_session = true;
                     }
                 }
@@ -596,6 +597,7 @@ int main(int argc, char *argv[])
                         // Updating all necessary info
                         strncpy(session_list[i].name, msg.data, msg.size);
                         strncpy(client_list[client_index].cur_session, msg.data, msg.size);
+                        client_list[client_index].cur_session[msg.size] = '\0';
                         session_list[i].active = true;
                         session_list[i].num_users = 1;
                         session_list[i].size = msg.size;
@@ -711,6 +713,7 @@ int main(int argc, char *argv[])
                     if (session_list[i].active && (session_list[i].size == msg.size) && (strncmp(session_list[i].name, msg.data, msg.size) == 0)) {
                         session_list[i].num_users++;
                         strncpy(client_list[client_index].cur_session, msg.data, msg.size);
+                        client_list[client_index].cur_session[msg.size] = '\0';
                         joined_session = true;
                     }
                 }
