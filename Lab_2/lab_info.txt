@@ -8,11 +8,32 @@ msg               type       source                        data
 /p_valid           18      the server (zero)                empty (il print user found in client)
 /p_invalid         19      the server(zero)                 empty (il print user not found in client)
 
-all 4 implemented in client and skeleton in server
+We have implemented 2 new features for our Text Conferencing App
 
-the priv message only works with user hamza for now due to line 721 in server, caitlin needs to implement that 
+Feature 1: Private Messages
+Any user can send Private messages to any other user using :  /priv <user_name> <message>
 
-the p_valid and p_invalid are two acks i decided to add because we want to notify the private message sender if 
-the user they entered exists, if the user they enetered doesnt exists, the message will not be sent and so we can notify them with the p_invalid acks
-. I already implemented this in the client asw and wrong a basic skeleton in the server. 
+This feature works regardless of if any of the users are in a session are not. This is a very useful feature as a user might want
+to communicate confidential information with another client but not the entire group. We implemented this by making the new message types 
+17, 18 and 19 (shown in table above).
+
+When a user wants to send a message, the client sends packet type 17 to the server and they recieves
+a p_valid or a p_invalid depending on if the recieveing user exists.
+
+Feature 2: Session Invites
+Any user that is in a session can invite another user that is not in a session using : /invite <user_name>
+
+In order to implement this feature, we have created 3 new message types 14, 15 and 16 (shown in table above)
+
+The invite will only work if the user sending the invite is in a session and if the user getting invited is not in a session.
+If the sender is not in a session, it will notify them that they cant invite anyone unless they are in a session. 
+If the reciever is in a session, it will notify them that they have gotten an invite but will not let them accept or decline it as
+they are in a session already
+
+If the invitation criteria are met, the reciever will have the option to either /accept <session_name> or /decline the invitation. 
+If they accept, they will join the session and if they decline, they will not.
+
+
+
+
 
