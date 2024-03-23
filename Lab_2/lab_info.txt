@@ -27,8 +27,7 @@ In order to implement this feature, we have created 3 new message types 14, 15 a
 
 The invite will only work if the user sending the invite is in a session and if the user getting invited is not in a session.
 If the sender is not in a session, it will notify them that they cant invite anyone unless they are in a session. 
-If the reciever is in a session, it will notify them that they have gotten an invite but will not let them accept or decline it as
-they are in a session already
+If the reciever is in a session, they will not recieve the invite as they are already in a session
 
 If the invitation criteria are met, the reciever will have the option to either /accept <session_name> or /decline the invitation. 
 If they accept, they will join the session and if they decline, they will not.
